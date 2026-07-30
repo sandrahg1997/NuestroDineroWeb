@@ -1,20 +1,44 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+
+type CookieToSet = {
+  name: string;
+  value: string;
+  options?: CookieOptions;
+};
+
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
-  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
-    cookies: {
-      getAll: () => request.cookies.getAll(),
-      setAll: (cookiesToSet) => {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
-      }
-    }
+  let response = NextResponse.next({
+    request,
   });
-  const { data: { user } } = await supabase.auth.getUser();
-  const protectedPath = !request.nextUrl.pathname.startsWith("/login") && !request.nextUrl.pathname.startsWith("/auth");
-  if (!user && protectedPath) return NextResponse.redirect(new URL("/login", request.url));
-  if (user && request.nextUrl.pathname === "/login") return NextResponse.redirect(new URL("/dashboard", request.url));
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+
+        setAll(cookiesToSet: CookieToSet[]) {
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
+
+          response = NextResponse.next({
+            request,
+          });
+
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
+
+  await supabase.auth.getUser();
+
   return response;
 }
