@@ -1,0 +1,1 @@
+"use client";import { createClient } from "@/lib/supabase/client";import { LogOut } from "lucide-react";export default function LogoutButton(){return <button className="btn btn-soft" onClick={async()=>{await createClient().auth.signOut();location.href="/login"}}><LogOut size={16}/>Salir</button>}
