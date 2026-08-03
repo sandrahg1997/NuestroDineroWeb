@@ -11,7 +11,7 @@ const items = [
   ["/dashboard", LayoutDashboard, "Inicio"],
   ["/transactions", ReceiptText, "Movimientos"],
   ["/categories", Tags, "Categorías"],
-  ["/scan", ScanLine, "Escanear"],
+  // ["/scan", ScanLine, "Escanear"],
   ["/recurring", Repeat2, "Recurrentes"],
   ["/budgets", PiggyBank, "Presupuestos"],
   ["/settings", Settings, "Ajustes"]
@@ -29,6 +29,7 @@ export default function AppShell({ children, households = [] }: { children: Reac
 
   const primary = items.slice(0, 4);
   const secondary = items.slice(4);
+  const moreActive = secondary.some(([href]) => pathname.startsWith(href));
 
   const toggleMore = () => setMore((current) => !current);
 
@@ -99,7 +100,7 @@ export default function AppShell({ children, households = [] }: { children: Reac
 
         <button
           type="button"
-          className="mobile-more"
+          className={`mobile-more ${moreActive ? "active" : ""}`}
           onClick={toggleMore}
           aria-expanded={more}
           aria-controls="mobile-more-menu"

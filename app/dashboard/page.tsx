@@ -2,6 +2,7 @@ import AppShell from "@/components/AppShell";
 import DashboardChartsLoader from "@/components/DashboardChartsLoader";
 import LogoutButton from "@/components/LogoutButton";
 import PageHeader from "@/components/PageHeader";
+import SubmitButton from "@/components/SubmitButton";
 import { getSessionContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { eur, monthKey } from "@/lib/utils";
@@ -121,7 +122,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
   const savingsRate = income > 0 ? Math.round((balance / income) * 100) : 0;
   const expenseChange = percentChange(expense, previousExpense);
   const topCategory = categoryData[0];
-  const firstName = user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0] || "equipo";
+  const firstName = user.user_metadata?.display_name?.split(" ")[0] || user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0] || "equipo";
 
   return (
     <AppShell households={households}>
@@ -143,7 +144,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
                 Hasta
                 <input name="to" type="date" defaultValue={selectedEnd} />
               </label>
-              <button type="submit" className="btn btn-soft">Aplicar</button>
+              <SubmitButton className="btn btn-soft" pendingText="Aplicando…">Aplicar</SubmitButton>
             </form>
           </div>
           <p className="hero-label">Balance disponible</p>
