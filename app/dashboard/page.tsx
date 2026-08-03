@@ -22,8 +22,6 @@ export default async function Dashboard() {
   if (!user) redirect("/login");
   if (!householdId) redirect("/settings");
 
-  await supabase.rpc("process_due_recurring", { p_household_id: householdId });
-
   const start = monthKey();
   const currentStart = new Date(`${start}T12:00:00`);
   const end = new Date(currentStart.getFullYear(), currentStart.getMonth() + 1, 0)
