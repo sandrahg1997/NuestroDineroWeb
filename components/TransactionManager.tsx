@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Category, Transaction, TransactionType } from "@/lib/types";
 import { eur } from "@/lib/utils";
-import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Inbox, MoreVertical, Pencil, Plus, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 type Form = {
@@ -40,12 +40,30 @@ export default function TransactionManager({ householdId, userId, initial, initi
   const [dateTo, setDateTo] = useState("");
   const [sort, setSort] = useState("date_desc");
   const [busy, setBusy] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
   const params = useSearchParams();
 
   useEffect(() => {
     const n = params.get("new");
     if (n === "expense" || n === "income") setForm(blank(n));
   }, [params]);
+
+  useEffect(() => {
+    if (!menuFor) return;
+    const close = () => setMenuFor(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [menuFor]);
+
+  const activeFilterCount = [type !== "all", !!category, !!dateFrom, !!dateTo].filter(Boolean).length;
+
+  function clearFilters() {
+    setType("all");
+    setCategory("");
+    setDateFrom("");
+    setDateTo("");
+  }
 
   const filtered = useMemo(() => {
     return rows
@@ -75,6 +93,33 @@ export default function TransactionManager({ householdId, userId, initial, initi
     const safe = value.length >= 10 ? value.slice(0, 10) : value;
     return new Date(`${safe}T12:00:00`).toLocaleDateString("es-ES");
   };
+
+  const dayLabel = (value: string | null | undefined) => {
+    if (!value) return "Sin fecha";
+    const safe = value.length >= 10 ? value.slice(0, 10) : value;
+    const d = new Date(`${safe}T12:00:00`);
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return "Hoy";
+    if (d.toDateString() === yesterday.toDateString()) return "Ayer";
+    return d.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+  };
+
+  const isDateSort = sort === "date_desc" || sort === "date_asc";
+
+  const mobileGroups = useMemo(() => {
+    if (!isDateSort) return [{ label: null as string | null, items: filtered }];
+    const groups: { label: string; items: Transaction[] }[] = [];
+    for (const r of filtered) {
+      const label = dayLabel(r.date);
+      const last = groups[groups.length - 1];
+      if (last && last.label === label) last.items.push(r);
+      else groups.push({ label, items: [r] });
+    }
+    return groups;
+  }, [filtered, isDateSort]);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -142,11 +187,20 @@ export default function TransactionManager({ householdId, userId, initial, initi
 
   return (
     <>
-      <div className="toolbar transaction-toolbar" style={{ marginBottom: 16 }}>
-        <div className="search-input" style={{ position: "relative", flex: "1 1 240px" }}>
-          <Search size={17} style={{ position: "absolute", left: 12, top: 12, color: "#817a89" }} />
+      <div className="toolbar transaction-toolbar-top" style={{ marginBottom: 12 }}>
+        <div className="search-input" style={{ position: "relative" }}>
+          <Search size={17} style={{ position: "absolute", left: 12, top: 12, color: "var(--muted)" }} />
           <input className="input" style={{ paddingLeft: 38 }} placeholder="Buscar comercio, concepto, categoría…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
+        <button type="button" className="btn btn-soft filters-toggle" onClick={() => setFiltersOpen((o) => !o)}>
+          <SlidersHorizontal size={16} />Filtros{activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
+        </button>
+        <button className="btn btn-primary" onClick={() => setForm(blank())}>
+          <Plus size={17} />Añadir
+        </button>
+      </div>
+
+      <div className={`transaction-toolbar ${filtersOpen ? "open" : ""}`} style={{ marginBottom: 16 }}>
         <select className="select" style={{ width: "100%" }} value={type} onChange={(e) => setType(e.target.value as any)}>
           <option value="all">Todos</option>
           <option value="expense">Gastos</option>
@@ -164,9 +218,9 @@ export default function TransactionManager({ householdId, userId, initial, initi
           <option value="amount_desc">Mayor importe</option>
           <option value="amount_asc">Menor importe</option>
         </select>
-        <button className="btn btn-primary" onClick={() => setForm(blank())}>
-          <Plus size={17} />Añadir
-        </button>
+        {activeFilterCount > 0 && (
+          <button type="button" className="btn btn-ghost" onClick={clearFilters}>Limpiar filtros</button>
+        )}
       </div>
 
       <div className="card table-wrap">
@@ -206,25 +260,49 @@ export default function TransactionManager({ householdId, userId, initial, initi
             </tbody>
           </table>
         ) : (
-          <div className="empty">No hay movimientos que encajen con los filtros.</div>
+          <div className="empty">
+            <Inbox size={32} />
+            <strong>No hay movimientos</strong>
+            <span>Prueba a cambiar los filtros de búsqueda.</span>
+          </div>
         )}
 
         {filtered.length > 0 && (
           <div className="mobile-list">
-            {filtered.map((r) => (
-              <div className="mobile-row" key={r.id}>
-                <div className="left">
-                  <strong>{r.concept}</strong>
-                  <span className="meta">
-                    {dateLabel(r.date)} · {r.category?.icon} {r.category?.name ?? "Sin categoría"}
-                  </span>
-                  {r.merchant && <span className="meta">{r.merchant}</span>}
-                </div>
-                <div className="chip-row" style={{ alignItems: "center", gap: 10 }}>
-                  <span className={`amount ${r.type === "expense" ? "expense" : "income"}`}>{eur.format(r.amount)}</span>
-                  <button className="btn btn-ghost" onClick={() => edit(r)}><Pencil size={16} /></button>
-                  <button className="btn btn-ghost expense" onClick={() => remove(r.id)}><Trash2 size={16} /></button>
-                </div>
+            {mobileGroups.map((g, gi) => (
+              <div className="mobile-group" key={g.label ?? gi}>
+                {g.label && <div className="mobile-group-label">{g.label}</div>}
+                {g.items.map((r) => (
+                  <div className="mobile-row" key={r.id}>
+                    <div className={`recent-icon ${r.type === "expense" ? "expense" : "income"}`}>
+                      {r.category?.icon || (r.type === "expense" ? "↓" : "↑")}
+                    </div>
+                    <div className="left">
+                      <strong>{r.concept}</strong>
+                      <span className="meta">
+                        {!g.label ? `${dateLabel(r.date)} · ` : ""}
+                        {r.category?.name ?? "Sin categoría"}
+                        {r.merchant ? ` · ${r.merchant}` : ""}
+                      </span>
+                    </div>
+                    <div className="right">
+                      <span className={`amount ${r.type === "expense" ? "expense" : "income"}`}>
+                        {r.type === "expense" ? "-" : "+"}{eur.format(Math.abs(r.amount))}
+                      </span>
+                      <div className="row-menu" onClick={(e) => e.stopPropagation()}>
+                        <button type="button" className="btn btn-ghost" onClick={() => setMenuFor(menuFor === r.id ? null : r.id)}>
+                          <MoreVertical size={18} />
+                        </button>
+                        {menuFor === r.id && (
+                          <div className="row-menu-popup">
+                            <button type="button" onClick={() => { edit(r); setMenuFor(null); }}><Pencil size={15} />Editar</button>
+                            <button type="button" className="expense" onClick={() => { remove(r.id); setMenuFor(null); }}><Trash2 size={15} />Eliminar</button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
