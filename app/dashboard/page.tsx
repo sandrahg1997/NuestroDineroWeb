@@ -38,7 +38,7 @@ function percentChange(current: number, previous: number) {
 }
 
 export default async function Dashboard({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
-  const { supabase, user, householdId, dashboardRangeFrom, dashboardRangeTo } = await getSessionContext();
+  const { supabase, user, householdId, households, dashboardRangeFrom, dashboardRangeTo } = await getSessionContext();
   if (!user) redirect("/login");
   if (!householdId) redirect("/settings");
 
@@ -124,7 +124,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
   const firstName = user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0] || "equipo";
 
   return (
-    <AppShell>
+    <AppShell households={households}>
       <PageHeader
         title={`Hola, ${firstName} 👋`}
         subtitle={new Date().toLocaleDateString("es-ES", { month: "long", year: "numeric" })}

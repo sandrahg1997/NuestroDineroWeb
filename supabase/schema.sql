@@ -17,8 +17,12 @@ create table public.household_members (
   role text not null default 'member' check(role in ('owner','member')),
   dashboard_range_from date, dashboard_range_to date,
   created_at timestamptz not null default now(),
-  primary key(household_id,user_id),
-  unique(user_id)
+  primary key(household_id,user_id)
+);
+create table public.user_preferences (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  active_household_id uuid references public.households(id) on delete set null,
+  created_at timestamptz not null default now()
 );
 create table public.categories (
   id uuid primary key default gen_random_uuid(), household_id uuid not null references public.households(id) on delete cascade,
@@ -65,11 +69,13 @@ alter table public.transactions enable row level security;
 alter table public.recurring_transactions enable row level security;
 alter table public.budgets enable row level security;
 alter table public.merchant_category_rules enable row level security;
+alter table public.user_preferences enable row level security;
 
 create policy "members read households" on public.households for select using(public.is_household_member(id));
 create policy "members update households" on public.households for update using(public.is_household_member(id));
 create policy "members read memberships" on public.household_members for select using(public.is_household_member(household_id));
 create policy "members update own membership" on public.household_members for update using(user_id=auth.uid()) with check(user_id=auth.uid());
+create policy "user reads own preferences" on public.user_preferences for select using(user_id=auth.uid());
 create policy "household categories" on public.categories for all using(public.is_household_member(household_id)) with check(public.is_household_member(household_id));
 create policy "household transactions" on public.transactions for all using(public.is_household_member(household_id)) with check(public.is_household_member(household_id) and user_id=auth.uid());
 create policy "household recurring" on public.recurring_transactions for all using(public.is_household_member(household_id)) with check(public.is_household_member(household_id));
@@ -93,25 +99,64 @@ begin
  insert into households(name,owner_id) values(coalesce(new.raw_user_meta_data->>'display_name','Nuestro hogar'),new.id) returning id into h;
  insert into household_members(household_id,user_id,role) values(h,new.id,'owner');
  perform seed_categories(h);
+ insert into user_preferences(user_id,active_household_id) values(new.id,h);
  return new;
 end $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users for each row execute procedure public.handle_new_user();
 
 create or replace function public.join_household(p_invite_code text) returns uuid language plpgsql security definer set search_path=public as $$
-declare target uuid; old_h uuid;
+declare target uuid;
 begin
  if auth.uid() is null then raise exception 'No autenticado'; end if;
  select id into target from households where invite_code=upper(trim(p_invite_code));
  if target is null then raise exception 'Código no válido'; end if;
- select household_id into old_h from household_members where user_id=auth.uid();
- delete from household_members where user_id=auth.uid();
- insert into household_members(household_id,user_id,role) values(target,auth.uid(),'member');
- -- El espacio personal vacío queda eliminado; si tenía datos se conserva para evitar pérdidas.
- if old_h is not null and not exists(select 1 from transactions where household_id=old_h) and not exists(select 1 from household_members where household_id=old_h) then delete from households where id=old_h; end if;
+ insert into household_members(household_id,user_id,role) values(target,auth.uid(),'member') on conflict(household_id,user_id) do nothing;
+ insert into user_preferences(user_id,active_household_id) values(auth.uid(),target)
+   on conflict(user_id) do update set active_household_id=excluded.active_household_id;
  return target;
 end $$;
 grant execute on function public.join_household(text) to authenticated;
+
+create or replace function public.create_personal_household(p_name text default 'Mi espacio personal') returns uuid language plpgsql security definer set search_path=public as $$
+declare h uuid;
+begin
+ if auth.uid() is null then raise exception 'No autenticado'; end if;
+ insert into households(name,owner_id) values(p_name,auth.uid()) returning id into h;
+ insert into household_members(household_id,user_id,role) values(h,auth.uid(),'owner');
+ perform seed_categories(h);
+ insert into user_preferences(user_id,active_household_id) values(auth.uid(),h)
+   on conflict(user_id) do update set active_household_id=excluded.active_household_id;
+ return h;
+end $$;
+grant execute on function public.create_personal_household(text) to authenticated;
+
+create or replace function public.set_active_household(p_household_id uuid) returns void language plpgsql security definer set search_path=public as $$
+begin
+ if not exists(select 1 from household_members where household_id=p_household_id and user_id=auth.uid()) then
+   raise exception 'No perteneces a ese espacio';
+ end if;
+ insert into user_preferences(user_id,active_household_id) values(auth.uid(),p_household_id)
+   on conflict(user_id) do update set active_household_id=excluded.active_household_id;
+end $$;
+grant execute on function public.set_active_household(uuid) to authenticated;
+
+create or replace function public.get_my_households()
+returns table(household_id uuid, name text, member_count bigint, is_active boolean, partner_email text)
+language plpgsql stable security definer set search_path=public as $$
+declare active_id uuid;
+begin
+ select active_household_id into active_id from user_preferences where user_id=auth.uid();
+ return query
+  select h.id, h.name,
+    (select count(*) from household_members m where m.household_id=h.id),
+    h.id = coalesce(active_id,(select hm0.household_id from household_members hm0 where hm0.user_id=auth.uid() order by hm0.created_at limit 1)),
+    (select u.email::text from household_members m2 join auth.users u on u.id=m2.user_id where m2.household_id=h.id and m2.user_id<>auth.uid() limit 1)
+  from households h
+  join household_members hm on hm.household_id=h.id and hm.user_id=auth.uid()
+  order by hm.created_at;
+end $$;
+grant execute on function public.get_my_households() to authenticated;
 
 create or replace function public.process_due_recurring(p_household_id uuid) returns integer language plpgsql security definer set search_path=public as $$
 declare r recurring_transactions%rowtype; generated integer:=0; d date;

@@ -1,9 +1,11 @@
 "use client";
 
+import { createClient } from "@/lib/supabase/client";
+import type { HouseholdOption } from "@/lib/data";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useState } from "react";
-import { LayoutDashboard, ReceiptText, Tags, Repeat2, PiggyBank, ScanLine, Settings, Plus, MoreHorizontal } from "lucide-react";
+import { LayoutDashboard, ReceiptText, Tags, Repeat2, PiggyBank, ScanLine, Settings, Plus, MoreHorizontal, Users } from "lucide-react";
 
 const items = [
   ["/dashboard", LayoutDashboard, "Inicio"],
@@ -15,14 +17,33 @@ const items = [
   ["/settings", Settings, "Ajustes"]
 ] as const;
 
-export default function AppShell({ children }: { children: ReactNode }) {
+function householdLabel(h: HouseholdOption) {
+  if (h.member_count > 1) return h.partner_email ? `Compartido con ${h.partner_email}` : "Compartido";
+  return "Personal";
+}
+
+export default function AppShell({ children, households = [] }: { children: ReactNode; households?: HouseholdOption[] }) {
   const pathname = usePathname();
   const [more, setMore] = useState(false);
+  const [switching, setSwitching] = useState(false);
 
   const primary = items.slice(0, 4);
   const secondary = items.slice(4);
 
   const toggleMore = () => setMore((current) => !current);
+
+  async function handleSwitch(e: React.ChangeEvent<HTMLSelectElement>) {
+    const householdId = e.target.value;
+    setSwitching(true);
+    const s = createClient();
+    const { error } = await s.rpc("set_active_household", { p_household_id: householdId });
+    if (error) {
+      alert(error.message);
+      setSwitching(false);
+      return;
+    }
+    window.location.reload();
+  }
 
   return (
     <div className="shell">
@@ -44,7 +65,23 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </aside>
 
-      <main className="main">{children}</main>
+      <main className="main">
+        {households.length > 1 && (
+          <div className="household-switcher">
+            <Users size={15} />
+            <select
+              value={households.find((h) => h.is_active)?.household_id ?? households[0]?.household_id}
+              onChange={handleSwitch}
+              disabled={switching}
+            >
+              {households.map((h) => (
+                <option key={h.household_id} value={h.household_id}>{householdLabel(h)}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {children}
+      </main>
 
       <nav className="mobile-nav">
         {primary.map(([href, Icon, label]) => (

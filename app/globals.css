@@ -56,6 +56,9 @@
 .empty svg{color:var(--line);margin-bottom:6px}
 .empty strong{color:var(--text);font-size:15px}
 
+.household-switcher{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;background:#f3edf7;color:var(--muted);font-size:13px;font-weight:700;margin-bottom:14px}
+.household-switcher select{border:0;background:transparent;color:var(--text);font-weight:750;font-size:13px;padding:0;outline:none;cursor:pointer;max-width:220px;text-overflow:ellipsis}
+
 /* Transaction filters: collapsible on mobile */
 .transaction-toolbar-top{display:flex;gap:10px;align-items:center}
 .transaction-toolbar-top .search-input{flex:1 1 240px}
@@ -108,4 +111,5 @@
 	.row-menu-popup button:hover{background:#2a2138}
 	.mobile-row:active{background:#221d2e}
 	.empty svg{color:var(--line)}
+	.household-switcher{background:#2a2438}
 }
