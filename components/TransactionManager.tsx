@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Category, Transaction, TransactionType } from "@/lib/types";
 import { eur } from "@/lib/utils";
-import { Inbox, MoreVertical, Pencil, Plus, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
+import { Inbox, LoaderCircle, MoreVertical, Pencil, Plus, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 type Form = {
@@ -42,6 +42,7 @@ export default function TransactionManager({ householdId, userId, initial, initi
   const [busy, setBusy] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const params = useSearchParams();
 
   useEffect(() => {
@@ -165,10 +166,12 @@ export default function TransactionManager({ householdId, userId, initial, initi
 
   async function remove(id: string) {
     if (!confirm("¿Eliminar este movimiento?")) return;
+    setDeletingId(id);
     const s = createClient();
     const { error } = await s.from("transactions").delete().eq("id", id);
     if (!error) setRows(rows.filter((r) => r.id !== id));
     else alert(error.message);
+    setDeletingId(null);
   }
 
   function edit(r: Transaction) {
@@ -251,8 +254,10 @@ export default function TransactionManager({ householdId, userId, initial, initi
                   <td>{eur.format(r.amount)}</td>
                   <td>
                     <div className="chip-row" style={{ justifyContent: "flex-end" }}>
-                      <button className="btn btn-ghost" onClick={() => edit(r)}><Pencil size={16} /></button>
-                      <button className="btn btn-ghost expense" onClick={() => remove(r.id)}><Trash2 size={16} /></button>
+                      <button className="btn btn-ghost" onClick={() => edit(r)} disabled={deletingId === r.id}><Pencil size={16} /></button>
+                      <button className="btn btn-ghost expense" onClick={() => remove(r.id)} disabled={deletingId === r.id}>
+                        {deletingId === r.id ? <LoaderCircle size={16} className="spin" /> : <Trash2 size={16} />}
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -295,8 +300,11 @@ export default function TransactionManager({ householdId, userId, initial, initi
                         </button>
                         {menuFor === r.id && (
                           <div className="row-menu-popup">
-                            <button type="button" onClick={() => { edit(r); setMenuFor(null); }}><Pencil size={15} />Editar</button>
-                            <button type="button" className="expense" onClick={() => { remove(r.id); setMenuFor(null); }}><Trash2 size={15} />Eliminar</button>
+                            <button type="button" onClick={() => { edit(r); setMenuFor(null); }} disabled={deletingId === r.id}><Pencil size={15} />Editar</button>
+                            <button type="button" className="expense" onClick={() => remove(r.id)} disabled={deletingId === r.id}>
+                              {deletingId === r.id ? <LoaderCircle size={15} className="spin" /> : <Trash2 size={15} />}
+                              {deletingId === r.id ? "Eliminando…" : "Eliminar"}
+                            </button>
                           </div>
                         )}
                       </div>

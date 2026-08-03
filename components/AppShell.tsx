@@ -18,7 +18,7 @@ const items = [
 ] as const;
 
 function householdLabel(h: HouseholdOption) {
-  if (h.member_count > 1) return h.partner_email ? `Compartido con ${h.partner_email}` : "Compartido";
+  if (h.member_count > 1) return h.partner_email ? `Compartido con ${h.partner_email.split("@")[0]}` : "Compartido";
   return "Personal";
 }
 
@@ -67,12 +67,13 @@ export default function AppShell({ children, households = [] }: { children: Reac
 
       <main className="main">
         {households.length > 1 && (
-          <div className="household-switcher">
-            <Users size={15} />
+          <div className={`household-switcher ${switching ? "is-switching" : ""}`}>
+            <span className="household-switcher-icon"><Users size={13} /></span>
             <select
               value={households.find((h) => h.is_active)?.household_id ?? households[0]?.household_id}
               onChange={handleSwitch}
               disabled={switching}
+              aria-label="Cambiar de espacio"
             >
               {households.map((h) => (
                 <option key={h.household_id} value={h.household_id}>{householdLabel(h)}</option>
