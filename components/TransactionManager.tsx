@@ -208,6 +208,27 @@ export default function TransactionManager({ householdId, userId, initial, initi
         ) : (
           <div className="empty">No hay movimientos que encajen con los filtros.</div>
         )}
+
+        {filtered.length > 0 && (
+          <div className="mobile-list">
+            {filtered.map((r) => (
+              <div className="mobile-row" key={r.id}>
+                <div className="left">
+                  <strong>{r.concept}</strong>
+                  <span className="meta">
+                    {dateLabel(r.date)} · {r.category?.icon} {r.category?.name ?? "Sin categoría"}
+                  </span>
+                  {r.merchant && <span className="meta">{r.merchant}</span>}
+                </div>
+                <div className="chip-row" style={{ alignItems: "center", gap: 10 }}>
+                  <span className={`amount ${r.type === "expense" ? "expense" : "income"}`}>{eur.format(r.amount)}</span>
+                  <button className="btn btn-ghost" onClick={() => edit(r)}><Pencil size={16} /></button>
+                  <button className="btn btn-ghost expense" onClick={() => remove(r.id)}><Trash2 size={16} /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {form && (
