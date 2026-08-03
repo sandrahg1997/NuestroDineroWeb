@@ -1,5 +1,5 @@
 import AppShell from "@/components/AppShell";
-import DashboardCharts from "@/components/DashboardCharts";
+import DashboardChartsLoader from "@/components/DashboardChartsLoader";
 import LogoutButton from "@/components/LogoutButton";
 import PageHeader from "@/components/PageHeader";
 import { getSessionContext } from "@/lib/data";
@@ -17,30 +17,39 @@ function percentChange(current: number, previous: number) {
   return ((current - previous) / previous) * 100;
 }
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const { supabase, user, householdId } = await getSessionContext();
   if (!user) redirect("/login");
   if (!householdId) redirect("/settings");
 
-  const start = monthKey();
-  const currentStart = new Date(`${start}T12:00:00`);
-  const end = new Date(currentStart.getFullYear(), currentStart.getMonth() + 1, 0)
+  const resolvedSearchParams = (await Promise.resolve(searchParams ?? {})) as Record<string, string | string[] | undefined>;
+  const fromParam = typeof resolvedSearchParams.from === "string" ? resolvedSearchParams.from : "";
+  const toParam = typeof resolvedSearchParams.to === "string" ? resolvedSearchParams.to : "";
+
+  const defaultStart = monthKey();
+  const currentStart = new Date(`${defaultStart}T12:00:00`);
+  const defaultEnd = new Date(currentStart.getFullYear(), currentStart.getMonth() + 1, 0)
     .toISOString()
     .slice(0, 10);
-  const previousStart = new Date(currentStart.getFullYear(), currentStart.getMonth() - 1, 1)
-    .toISOString()
-    .slice(0, 10);
-  const previousEnd = new Date(currentStart.getFullYear(), currentStart.getMonth(), 0)
-    .toISOString()
-    .slice(0, 10);
+
+  const selectedStart = fromParam || defaultStart;
+  const selectedEnd = toParam || defaultEnd;
+  const rangeStart = new Date(`${selectedStart}T12:00:00`);
+  const rangeEnd = new Date(`${selectedEnd}T12:00:00`);
+  const rangeDays = Math.max(1, Math.round((rangeEnd.getTime() - rangeStart.getTime()) / 86400000) + 1);
+  const previousStartDate = new Date(rangeStart.getTime() - rangeDays * 86400000);
+  const previousEndDate = new Date(rangeStart.getTime() - 86400000);
+  const previousStart = previousStartDate.toISOString().slice(0, 10);
+  const previousEnd = previousEndDate.toISOString().slice(0, 10);
+  const budgetMonth = selectedStart.slice(0, 7);
 
   const [{ data: tx }, { data: previousTx }, { data: budgets }] = await Promise.all([
     supabase
       .from("transactions")
       .select("*,category:categories(*)")
       .eq("household_id", householdId)
-      .gte("date", start)
-      .lte("date", end)
+      .gte("date", selectedStart)
+      .lte("date", selectedEnd)
       .order("date", { ascending: false }),
     supabase
       .from("transactions")
@@ -52,7 +61,7 @@ export default async function Dashboard() {
       .from("budgets")
       .select("*,category:categories(*)")
       .eq("household_id", householdId)
-      .eq("month", start),
+      .eq("month", budgetMonth),
   ]);
 
   const rows = (tx ?? []) as DashboardTransaction[];
@@ -99,19 +108,24 @@ export default async function Dashboard() {
       <PageHeader
         title={`Hola, ${firstName} 👋`}
         subtitle={new Date().toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
-        actions={
-          <div className="toolbar">
-            <Link className="btn btn-primary dashboard-add" href="/transactions?new=expense">
-              <Plus size={17} /> Añadir gasto
-            </Link>
-            <LogoutButton />
-          </div>
-        }
       />
 
       <section className="dashboard-hero">
         <div className="hero-copy">
           <div className="hero-kicker"><Sparkles size={15} /> Tu mes, de un vistazo</div>
+          <div className="dashboard-range-inline">
+            <form method="get" action="/dashboard" className="dashboard-range-form">
+              <label>
+                Desde
+                <input name="from" type="date" defaultValue={selectedStart} />
+              </label>
+              <label>
+                Hasta
+                <input name="to" type="date" defaultValue={selectedEnd} />
+              </label>
+              <button type="submit" className="btn btn-soft">Aplicar</button>
+            </form>
+          </div>
           <p className="hero-label">Balance disponible</p>
           <h1 className={balance >= 0 ? "hero-balance positive" : "hero-balance negative"}>{eur.format(balance)}</h1>
           <div className="hero-trend">
@@ -119,10 +133,15 @@ export default async function Dashboard() {
             <span>{Math.abs(Math.round(expenseChange))}% de gasto {expenseChange <= 0 ? "menos" : "más"} que el mes pasado</span>
           </div>
         </div>
-        <div className="hero-orb" aria-hidden="true"><WalletCards size={54} /></div>
+        <div className="hero-orb" aria-hidden="true"><WalletCards size={54} />
+        </div>
         <div className="hero-glow hero-glow-one" />
         <div className="hero-glow hero-glow-two" />
       </section>
+
+      <div className="hero-add-row">
+        <Link href="/transactions?new=expense"><button className="btn btn-primary hero-add" aria-label="Añadir gasto"><Plus size={14}/> Añadir gasto</button></Link>
+      </div>
 
       <section className="dashboard-metrics">
         <article className="dashboard-metric-card">
@@ -184,7 +203,7 @@ export default async function Dashboard() {
         </article>
       </section>
 
-      <DashboardCharts
+      <DashboardChartsLoader
         byCategory={categoryData}
         byDay={[...dayMap.values()].sort((a, b) => Number(a.day) - Number(b.day))}
       />
