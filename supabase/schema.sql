@@ -15,6 +15,7 @@ create table public.household_members (
   household_id uuid not null references public.households(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   role text not null default 'member' check(role in ('owner','member')),
+  dashboard_range_from date, dashboard_range_to date,
   created_at timestamptz not null default now(),
   primary key(household_id,user_id),
   unique(user_id)
@@ -68,6 +69,7 @@ alter table public.merchant_category_rules enable row level security;
 create policy "members read households" on public.households for select using(public.is_household_member(id));
 create policy "members update households" on public.households for update using(public.is_household_member(id));
 create policy "members read memberships" on public.household_members for select using(public.is_household_member(household_id));
+create policy "members update own membership" on public.household_members for update using(user_id=auth.uid()) with check(user_id=auth.uid());
 create policy "household categories" on public.categories for all using(public.is_household_member(household_id)) with check(public.is_household_member(household_id));
 create policy "household transactions" on public.transactions for all using(public.is_household_member(household_id)) with check(public.is_household_member(household_id) and user_id=auth.uid());
 create policy "household recurring" on public.recurring_transactions for all using(public.is_household_member(household_id)) with check(public.is_household_member(household_id));

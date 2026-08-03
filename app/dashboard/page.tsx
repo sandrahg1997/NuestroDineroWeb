@@ -3,10 +3,30 @@ import DashboardChartsLoader from "@/components/DashboardChartsLoader";
 import LogoutButton from "@/components/LogoutButton";
 import PageHeader from "@/components/PageHeader";
 import { getSessionContext } from "@/lib/data";
+import { createClient } from "@/lib/supabase/server";
 import { eur, monthKey } from "@/lib/utils";
 import { ArrowDownRight, ArrowUpRight, PiggyBank, Plus, ReceiptText, Sparkles, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+
+const isIsoDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+async function saveDashboardRange(formData: FormData) {
+  "use server";
+  const from = String(formData.get("from") ?? "");
+  const to = String(formData.get("to") ?? "");
+  if (!isIsoDate(from) || !isIsoDate(to)) redirect("/dashboard");
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    await supabase
+      .from("household_members")
+      .update({ dashboard_range_from: from, dashboard_range_to: to })
+      .eq("user_id", user.id);
+  }
+  redirect(`/dashboard?from=${from}&to=${to}`);
+}
 
 type DashboardTransaction = { id: string; type: "expense" | "income"; amount: number | string; date: string; concept: string; category: { name?: string } | null };
 type BudgetRow = { amount: number | string; category?: { name?: string } | null };
@@ -18,7 +38,7 @@ function percentChange(current: number, previous: number) {
 }
 
 export default async function Dashboard({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
-  const { supabase, user, householdId } = await getSessionContext();
+  const { supabase, user, householdId, dashboardRangeFrom, dashboardRangeTo } = await getSessionContext();
   if (!user) redirect("/login");
   if (!householdId) redirect("/settings");
 
@@ -32,8 +52,8 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
     .toISOString()
     .slice(0, 10);
 
-  const selectedStart = fromParam || defaultStart;
-  const selectedEnd = toParam || defaultEnd;
+  const selectedStart = fromParam || dashboardRangeFrom || defaultStart;
+  const selectedEnd = toParam || dashboardRangeTo || defaultEnd;
   const rangeStart = new Date(`${selectedStart}T12:00:00`);
   const rangeEnd = new Date(`${selectedEnd}T12:00:00`);
   const rangeDays = Math.max(1, Math.round((rangeEnd.getTime() - rangeStart.getTime()) / 86400000) + 1);
@@ -114,7 +134,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
         <div className="hero-copy">
           <div className="hero-kicker"><Sparkles size={15} /> Tu mes, de un vistazo</div>
           <div className="dashboard-range-inline">
-            <form method="get" action="/dashboard" className="dashboard-range-form">
+            <form action={saveDashboardRange} className="dashboard-range-form">
               <label>
                 Desde
                 <input name="from" type="date" defaultValue={selectedStart} />
