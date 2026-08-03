@@ -1,11 +1,10 @@
 import AppShell from "@/components/AppShell";
 import DashboardChartsLoader from "@/components/DashboardChartsLoader";
-import LogoutButton from "@/components/LogoutButton";
 import PageHeader from "@/components/PageHeader";
 import SubmitButton from "@/components/SubmitButton";
 import { getSessionContext } from "@/lib/data";
-import { createClient } from "@/lib/supabase/server";
-import { eur, monthKey } from "@/lib/utils";
+import { computePeriodSummary } from "@/lib/period-summary";
+import { defaultPeriodName, eur, monthKey } from "@/lib/utils";
 import { ArrowDownRight, ArrowUpRight, PiggyBank, Plus, ReceiptText, Sparkles, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -18,43 +17,47 @@ async function saveDashboardRange(formData: FormData) {
   const to = String(formData.get("to") ?? "");
   if (!isIsoDate(from) || !isIsoDate(to)) redirect("/dashboard");
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    await supabase
-      .from("household_members")
-      .update({ dashboard_range_from: from, dashboard_range_to: to })
-      .eq("user_id", user.id);
+  const { supabase, householdId, activePeriod } = await getSessionContext();
+  if (householdId) {
+    if (activePeriod) {
+      // El periodo activo es único y controlado por el usuario: editar las fechas
+      // en Inicio modifica ESE periodo, nunca crea uno nuevo ni depende del día de hoy.
+      await supabase.from("periods").update({ start_date: from, end_date: to }).eq("id", activePeriod.id);
+    } else {
+      const { data: created } = await supabase
+        .from("periods")
+        .insert({ household_id: householdId, name: defaultPeriodName(from, to), start_date: from, end_date: to })
+        .select("id")
+        .single();
+      if (created?.id) {
+        await supabase.from("households").update({ active_period_id: created.id }).eq("id", householdId);
+      }
+    }
   }
-  redirect(`/dashboard?from=${from}&to=${to}`);
+  redirect("/dashboard");
 }
-
-type DashboardTransaction = { id: string; type: "expense" | "income"; amount: number | string; date: string; concept: string; category: { name?: string } | null };
-type BudgetRow = { amount: number | string; category?: { name?: string } | null };
-type PreviousTransaction = { type: "expense" | "income"; amount: number | string };
 
 function percentChange(current: number, previous: number) {
   if (previous === 0) return current === 0 ? 0 : 100;
   return ((current - previous) / previous) * 100;
 }
 
-export default async function Dashboard({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
-  const { supabase, user, householdId, households, dashboardRangeFrom, dashboardRangeTo } = await getSessionContext();
+export default async function Dashboard() {
+  const { supabase, user, householdId, households, activePeriod } = await getSessionContext();
   if (!user) redirect("/login");
   if (!householdId) redirect("/settings");
 
-  const resolvedSearchParams = (await Promise.resolve(searchParams ?? {})) as Record<string, string | string[] | undefined>;
-  const fromParam = typeof resolvedSearchParams.from === "string" ? resolvedSearchParams.from : "";
-  const toParam = typeof resolvedSearchParams.to === "string" ? resolvedSearchParams.to : "";
-
+  // Sin periodo activo (p.ej. se borraron todos): mostrar el mes natural actual
+  // por defecto hasta que el usuario pulse "Aplicar", momento en que se crea uno.
   const defaultStart = monthKey();
   const currentStart = new Date(`${defaultStart}T12:00:00`);
-  const defaultEnd = new Date(currentStart.getFullYear(), currentStart.getMonth() + 1, 0)
-    .toISOString()
-    .slice(0, 10);
+  const defaultEnd = new Date(currentStart.getFullYear(), currentStart.getMonth() + 1, 0).toISOString().slice(0, 10);
 
-  const selectedStart = fromParam || dashboardRangeFrom || defaultStart;
-  const selectedEnd = toParam || dashboardRangeTo || defaultEnd;
+  const selectedStart = activePeriod?.start_date ?? defaultStart;
+  const selectedEnd = activePeriod?.end_date ?? defaultEnd;
+  const periodId = activePeriod?.id ?? null;
+  const periodLabel = activePeriod?.name ?? defaultPeriodName(selectedStart, selectedEnd);
+
   const rangeStart = new Date(`${selectedStart}T12:00:00`);
   const rangeEnd = new Date(`${selectedEnd}T12:00:00`);
   const rangeDays = Math.max(1, Math.round((rangeEnd.getTime() - rangeStart.getTime()) / 86400000) + 1);
@@ -62,78 +65,30 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
   const previousEndDate = new Date(rangeStart.getTime() - 86400000);
   const previousStart = previousStartDate.toISOString().slice(0, 10);
   const previousEnd = previousEndDate.toISOString().slice(0, 10);
-  const budgetMonth = selectedStart.slice(0, 7);
 
-  const [{ data: tx }, { data: previousTx }, { data: budgets }] = await Promise.all([
-    supabase
-      .from("transactions")
-      .select("*,category:categories(*)")
-      .eq("household_id", householdId)
-      .gte("date", selectedStart)
-      .lte("date", selectedEnd)
-      .order("date", { ascending: false }),
-    supabase
-      .from("transactions")
-      .select("amount,type")
-      .eq("household_id", householdId)
-      .gte("date", previousStart)
-      .lte("date", previousEnd),
-    supabase
-      .from("budgets")
-      .select("*,category:categories(*)")
-      .eq("household_id", householdId)
-      .eq("month", budgetMonth),
+  const [summary, { data: previousTx }] = await Promise.all([
+    computePeriodSummary(supabase, householdId, selectedStart, selectedEnd, periodId),
+    supabase.from("transactions").select("amount,type").eq("household_id", householdId).gte("date", previousStart).lte("date", previousEnd),
   ]);
 
-  const rows = (tx ?? []) as DashboardTransaction[];
-  const previousRows = (previousTx ?? []) as PreviousTransaction[];
-  const budgetRows = (budgets ?? []) as BudgetRow[];
-  const expense = rows
-    .filter((item) => item.type === "expense")
-    .reduce((total, item) => total + Number(item.amount), 0);
-  const income = rows
-    .filter((item) => item.type === "income")
-    .reduce((total, item) => total + Number(item.amount), 0);
-  const previousExpense = previousRows
+  const previousExpense = (previousTx ?? [])
     .filter((item) => item.type === "expense")
     .reduce((total, item) => total + Number(item.amount), 0);
 
-  const categoryMap = new Map<string, number>();
-  const dayMap = new Map<string, { day: string; expense: number; income: number }>();
-
-  for (const row of rows) {
-    const day = new Date(`${row.date}T12:00:00`).getDate().toString();
-    const daily = dayMap.get(day) ?? { day, expense: 0, income: 0 };
-    daily[row.type as "expense" | "income"] += Number(row.amount);
-    dayMap.set(day, daily);
-
-    if (row.type === "expense") {
-      const categoryName = (row.category as { name?: string } | null)?.name ?? "Sin categoría";
-      categoryMap.set(categoryName, (categoryMap.get(categoryName) ?? 0) + Number(row.amount));
-    }
-  }
-
-  const categoryData = [...categoryMap]
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value);
-  const budgetTotal = budgetRows.reduce((total: number, budget: BudgetRow) => total + Number(budget.amount), 0);
-  const budgetPercentage = budgetTotal > 0 ? Math.round((expense / budgetTotal) * 100) : 0;
-  const balance = income - expense;
-  const savingsRate = income > 0 ? Math.round((balance / income) * 100) : 0;
+  const { rows, expense, income, balance, savingsRate, categoryData, byDay, topCategory, budgetTotal, budgetPercentage } = summary;
   const expenseChange = percentChange(expense, previousExpense);
-  const topCategory = categoryData[0];
   const firstName = user.user_metadata?.display_name?.split(" ")[0] || user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0] || "equipo";
 
   return (
     <AppShell households={households}>
       <PageHeader
         title={`Hola, ${firstName} 👋`}
-        subtitle={new Date().toLocaleDateString("es-ES", { month: "long", year: "numeric" })}
+        subtitle={periodLabel}
       />
 
       <section className="dashboard-hero">
         <div className="hero-copy">
-          <div className="hero-kicker"><Sparkles size={15} /> Tu mes, de un vistazo</div>
+          <div className="hero-kicker"><Sparkles size={15} /> Tu periodo, de un vistazo</div>
           <div className="dashboard-range-inline">
             <form action={saveDashboardRange} className="dashboard-range-form">
               <label>
@@ -151,7 +106,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
           <h1 className={balance >= 0 ? "hero-balance positive" : "hero-balance negative"}>{eur.format(balance)}</h1>
           <div className="hero-trend">
             {expenseChange <= 0 ? <ArrowDownRight size={17} /> : <ArrowUpRight size={17} />}
-            <span>{Math.abs(Math.round(expenseChange))}% de gasto {expenseChange <= 0 ? "menos" : "más"} que el mes pasado</span>
+            <span>{Math.abs(Math.round(expenseChange))}% de gasto {expenseChange <= 0 ? "menos" : "más"} que el periodo anterior</span>
           </div>
         </div>
         <div className="hero-orb" aria-hidden="true"><WalletCards size={54} />
@@ -168,7 +123,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
         <article className="dashboard-metric-card">
           <div className="metric-icon metric-icon-expense"><ReceiptText size={20} /></div>
           <div>
-            <p className="metric-label">Gastado este mes</p>
+            <p className="metric-label">Gastado este periodo</p>
             <p className="dashboard-metric-value">{eur.format(expense)}</p>
           </div>
           <span className={`metric-badge ${expenseChange <= 0 ? "good" : "warn"}`}>
@@ -182,7 +137,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
             <p className="metric-label">Ingresos</p>
             <p className="dashboard-metric-value">{eur.format(income)}</p>
           </div>
-          <span className="metric-badge good">Este mes</span>
+          <span className="metric-badge good">Este periodo</span>
         </article>
 
         <article className="dashboard-metric-card">
@@ -201,7 +156,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
         <article className="budget-card">
           <div className="section-head dashboard-section-head">
             <div>
-              <span className="eyebrow">Presupuesto mensual</span>
+              <span className="eyebrow">Presupuesto del periodo</span>
               <h2>{budgetTotal ? `${eur.format(expense)} de ${eur.format(budgetTotal)}` : "Sin presupuesto configurado"}</h2>
             </div>
             {budgetTotal > 0 && <strong>{budgetPercentage}%</strong>}
@@ -210,7 +165,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
           <p className="budget-caption">
             {budgetTotal > 0
               ? budgetTotal - expense >= 0
-                ? `Te quedan ${eur.format(budgetTotal - expense)} para terminar el mes.`
+                ? `Te quedan ${eur.format(budgetTotal - expense)} para terminar el periodo.`
                 : `Has superado el presupuesto en ${eur.format(expense - budgetTotal)}.`
               : "Crea un presupuesto para saber cuánto margen te queda de un vistazo."}
           </p>
@@ -224,10 +179,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
         </article>
       </section>
 
-      <DashboardChartsLoader
-        byCategory={categoryData}
-        byDay={[...dayMap.values()].sort((a, b) => Number(a.day) - Number(b.day))}
-      />
+      <DashboardChartsLoader byCategory={categoryData} byDay={byDay} />
 
       <div className="section-head recent-head">
         <div>
@@ -239,7 +191,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: Promi
 
       <div className="card recent-card">
         {rows.slice(0, 6).map((row) => {
-          const categoryName = (row.category as { name?: string } | null)?.name ?? "Sin categoría";
+          const categoryName = row.category?.name ?? "Sin categoría";
           return (
             <div className="recent-row" key={row.id}>
               <div className={`recent-icon ${row.type}`}>{categoryName.slice(0, 1).toUpperCase()}</div>

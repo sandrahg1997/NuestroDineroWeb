@@ -53,13 +53,13 @@ export default function DashboardCharts({
               ))}
             </div>
           </div>
-        ) : <div className="empty">Sin gastos este mes.</div>}
+        ) : <div className="empty">Sin gastos en este periodo.</div>}
       </article>
 
       <article className="card chart-card">
         <div className="section-head dashboard-section-head">
           <div>
-            <span className="eyebrow">Ritmo del mes</span>
+            <span className="eyebrow">Ritmo del periodo</span>
             <h2>Evolución diaria</h2>
           </div>
         </div>

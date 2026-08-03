@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import type { Period } from "@/lib/types";
 
 export type HouseholdOption = {
   household_id: string;
@@ -17,8 +18,7 @@ export async function getSessionContext() {
       user: null,
       householdId: null,
       households: [] as HouseholdOption[],
-      dashboardRangeFrom: null,
-      dashboardRangeTo: null,
+      activePeriod: null as Period | null,
     };
   }
 
@@ -27,18 +27,15 @@ export async function getSessionContext() {
   const active = households.find((h) => h.is_active) ?? households[0] ?? null;
   const householdId = active?.household_id ?? null;
 
-  let dashboardRangeFrom: string | null = null;
-  let dashboardRangeTo: string | null = null;
+  let activePeriod: Period | null = null;
   if (householdId) {
-    const { data: membership } = await supabase
-      .from("household_members")
-      .select("dashboard_range_from,dashboard_range_to")
-      .eq("user_id", user.id)
-      .eq("household_id", householdId)
+    const { data: householdRow } = await supabase
+      .from("households")
+      .select("active_period:periods!households_active_period_id_fkey(id,household_id,name,start_date,end_date,created_at)")
+      .eq("id", householdId)
       .maybeSingle();
-    dashboardRangeFrom = membership?.dashboard_range_from ?? null;
-    dashboardRangeTo = membership?.dashboard_range_to ?? null;
+    activePeriod = ((householdRow?.active_period as unknown as Period | null) ?? null);
   }
 
-  return { supabase, user, householdId, households, dashboardRangeFrom, dashboardRangeTo };
+  return { supabase, user, householdId, households, activePeriod };
 }

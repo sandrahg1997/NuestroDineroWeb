@@ -9,13 +9,13 @@ create table public.households (
   name text not null default 'Nuestro hogar',
   invite_code text not null unique default upper(substr(encode(gen_random_bytes(6),'hex'),1,8)),
   owner_id uuid not null references auth.users(id) on delete cascade,
+  active_period_id uuid,
   created_at timestamptz not null default now()
 );
 create table public.household_members (
   household_id uuid not null references public.households(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   role text not null default 'member' check(role in ('owner','member')),
-  dashboard_range_from date, dashboard_range_to date,
   created_at timestamptz not null default now(),
   primary key(household_id,user_id)
 );
@@ -24,6 +24,17 @@ create table public.user_preferences (
   active_household_id uuid references public.households(id) on delete set null,
   created_at timestamptz not null default now()
 );
+create table public.periods (
+  id uuid primary key default gen_random_uuid(),
+  household_id uuid not null references public.households(id) on delete cascade,
+  name text not null,
+  start_date date not null,
+  end_date date not null,
+  created_at timestamptz not null default now(),
+  check(end_date>=start_date)
+);
+create index periods_household on public.periods(household_id,start_date desc);
+alter table public.households add constraint households_active_period_id_fkey foreign key(active_period_id) references public.periods(id) on delete set null;
 create table public.categories (
   id uuid primary key default gen_random_uuid(), household_id uuid not null references public.households(id) on delete cascade,
   name text not null, icon text not null default '📦', type transaction_type not null, is_default boolean not null default false,
@@ -46,11 +57,12 @@ alter table public.transactions add constraint transactions_recurring_fk foreign
 create unique index transactions_no_duplicate_recurrence on public.transactions(recurring_id,date) where recurring_id is not null;
 create table public.budgets (
   id uuid primary key default gen_random_uuid(), household_id uuid not null references public.households(id) on delete cascade,
-  category_id uuid references public.categories(id) on delete cascade, amount numeric(12,2) not null check(amount>0), month date not null,
+  category_id uuid references public.categories(id) on delete cascade, amount numeric(12,2) not null check(amount>0),
+  period_id uuid not null references public.periods(id) on delete cascade,
   created_at timestamptz not null default now()
 );
-create unique index budgets_unique_general on public.budgets(household_id,month) where category_id is null;
-create unique index budgets_unique_category on public.budgets(household_id,category_id,month) where category_id is not null;
+create unique index budgets_unique_general on public.budgets(household_id,period_id) where category_id is null;
+create unique index budgets_unique_category on public.budgets(household_id,category_id,period_id) where category_id is not null;
 create table public.merchant_category_rules (
   id uuid primary key default gen_random_uuid(), household_id uuid not null references public.households(id) on delete cascade,
   merchant_pattern text not null, category_id uuid not null references public.categories(id) on delete cascade,
@@ -64,18 +76,19 @@ $$;
 
 alter table public.households enable row level security;
 alter table public.household_members enable row level security;
+alter table public.user_preferences enable row level security;
+alter table public.periods enable row level security;
 alter table public.categories enable row level security;
 alter table public.transactions enable row level security;
 alter table public.recurring_transactions enable row level security;
 alter table public.budgets enable row level security;
 alter table public.merchant_category_rules enable row level security;
-alter table public.user_preferences enable row level security;
 
 create policy "members read households" on public.households for select using(public.is_household_member(id));
 create policy "members update households" on public.households for update using(public.is_household_member(id));
 create policy "members read memberships" on public.household_members for select using(public.is_household_member(household_id));
-create policy "members update own membership" on public.household_members for update using(user_id=auth.uid()) with check(user_id=auth.uid());
 create policy "user reads own preferences" on public.user_preferences for select using(user_id=auth.uid());
+create policy "household periods" on public.periods for all using(public.is_household_member(household_id)) with check(public.is_household_member(household_id));
 create policy "household categories" on public.categories for all using(public.is_household_member(household_id)) with check(public.is_household_member(household_id));
 create policy "household transactions" on public.transactions for all using(public.is_household_member(household_id)) with check(public.is_household_member(household_id) and user_id=auth.uid());
 create policy "household recurring" on public.recurring_transactions for all using(public.is_household_member(household_id)) with check(public.is_household_member(household_id));
@@ -93,12 +106,23 @@ begin
  on conflict do nothing;
 end $$;
 
+create or replace function public.create_initial_period(p_household uuid) returns uuid language plpgsql security definer set search_path=public as $$
+declare p uuid;
+begin
+ insert into periods(household_id,name,start_date,end_date)
+ values(p_household, initcap(to_char(date_trunc('month',current_date),'TMMonth YYYY')), date_trunc('month',current_date)::date, (date_trunc('month',current_date)+interval '1 month'-interval '1 day')::date)
+ returning id into p;
+ update households set active_period_id=p where id=p_household;
+ return p;
+end $$;
+
 create or replace function public.handle_new_user() returns trigger language plpgsql security definer set search_path=public as $$
 declare h uuid;
 begin
  insert into households(name,owner_id) values(coalesce(new.raw_user_meta_data->>'display_name','Nuestro hogar'),new.id) returning id into h;
  insert into household_members(household_id,user_id,role) values(h,new.id,'owner');
  perform seed_categories(h);
+ perform create_initial_period(h);
  insert into user_preferences(user_id,active_household_id) values(new.id,h);
  return new;
 end $$;
@@ -125,6 +149,7 @@ begin
  insert into households(name,owner_id) values(p_name,auth.uid()) returning id into h;
  insert into household_members(household_id,user_id,role) values(h,auth.uid(),'owner');
  perform seed_categories(h);
+ perform create_initial_period(h);
  insert into user_preferences(user_id,active_household_id) values(auth.uid(),h)
    on conflict(user_id) do update set active_household_id=excluded.active_household_id;
  return h;
