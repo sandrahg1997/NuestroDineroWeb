@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { LayoutDashboard, ReceiptText, Tags, Repeat2, PiggyBank, ScanLine, CalendarRange, Settings, Plus, MoreHorizontal, Users } from "lucide-react";
+import WhatsNewModal from "./WhatsNewModal";
 
 const items = [
   ["/dashboard", LayoutDashboard, "Inicio"],
@@ -49,6 +50,7 @@ export default function AppShell({ children, households = [] }: { children: Reac
 
   return (
     <div className="shell">
+      <WhatsNewModal />
       <aside className="sidebar">
         <div className="brand">
           <span className="brandmark">

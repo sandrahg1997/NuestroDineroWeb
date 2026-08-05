@@ -132,4 +132,14 @@
 	.empty svg{color:var(--line)}
 	.household-switcher{background:linear-gradient(135deg,#2a2138,#33223a);border-color:#3d2c48}
 	.household-switcher:after{border-color:var(--muted)}
+	.whatsnew-date{background:#2a2044;color:#c184f0}
 }
+
+/* Novedades (What's new) */
+.whatsnew-modal{width:min(480px,100%)}
+.whatsnew-modal .modal-head h2{display:flex;align-items:center;gap:9px;font-size:19px}
+.whatsnew-icon{color:var(--primary)}
+.whatsnew-body{display:grid;gap:16px;max-height:60vh;overflow-y:auto}
+.whatsnew-entry{display:grid;gap:8px}
+.whatsnew-date{align-self:start;display:inline-flex;padding:4px 10px;border-radius:999px;background:#f1e8f8;color:var(--primary);font-size:12px;font-weight:750;width:fit-content}
+.whatsnew-entry ul{margin:0;padding-left:20px;display:grid;gap:8px;line-height:1.45}
