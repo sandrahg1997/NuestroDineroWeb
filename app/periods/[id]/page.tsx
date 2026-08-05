@@ -29,7 +29,7 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
   if (!period) notFound();
 
   const summary = await computePeriodSummary(supabase, householdId, period.start_date, period.end_date, period.id);
-  const { expense, income, balance, savingsRate, categoryData, byDay, topCategory, budgetTotal, budgetPercentage, rows } = summary;
+  const { expense, income, balance, savingsRate, categoryData, byDay, topCategory, budgetTotal, budgetSpent, budgetPercentage, rows } = summary;
   const isActive = activePeriod?.id === period.id;
 
   return (
@@ -89,7 +89,7 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
           <div className="section-head dashboard-section-head">
             <div>
               <span className="eyebrow">Presupuesto del periodo</span>
-              <h2>{budgetTotal ? `${eur.format(expense)} de ${eur.format(budgetTotal)}` : "Sin presupuesto configurado"}</h2>
+              <h2>{budgetTotal ? `${eur.format(budgetSpent)} de ${eur.format(budgetTotal)}` : "Sin presupuesto configurado"}</h2>
             </div>
             {budgetTotal > 0 && <strong>{budgetPercentage}%</strong>}
           </div>

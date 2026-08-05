@@ -75,7 +75,7 @@ export default async function Dashboard() {
     .filter((item) => item.type === "expense")
     .reduce((total, item) => total + Number(item.amount), 0);
 
-  const { rows, expense, income, balance, savingsRate, categoryData, byDay, topCategory, budgetTotal, budgetPercentage } = summary;
+  const { rows, expense, income, balance, savingsRate, categoryData, byDay, topCategory, budgetTotal, budgetSpent, budgetPercentage } = summary;
   const expenseChange = percentChange(expense, previousExpense);
   const firstName = user.user_metadata?.display_name?.split(" ")[0] || user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0] || "equipo";
 
@@ -157,16 +157,16 @@ export default async function Dashboard() {
           <div className="section-head dashboard-section-head">
             <div>
               <span className="eyebrow">Presupuesto del periodo</span>
-              <h2>{budgetTotal ? `${eur.format(expense)} de ${eur.format(budgetTotal)}` : "Sin presupuesto configurado"}</h2>
+              <h2>{budgetTotal ? `${eur.format(budgetSpent)} de ${eur.format(budgetTotal)}` : "Sin presupuesto configurado"}</h2>
             </div>
             {budgetTotal > 0 && <strong>{budgetPercentage}%</strong>}
           </div>
           <div className="budget-track"><span style={{ width: `${Math.min(100, budgetPercentage)}%` }} /></div>
           <p className="budget-caption">
             {budgetTotal > 0
-              ? budgetTotal - expense >= 0
-                ? `Te quedan ${eur.format(budgetTotal - expense)} para terminar el periodo.`
-                : `Has superado el presupuesto en ${eur.format(expense - budgetTotal)}.`
+              ? budgetTotal - budgetSpent >= 0
+                ? `Te quedan ${eur.format(budgetTotal - budgetSpent)} para terminar el periodo.`
+                : `Has superado el presupuesto en ${eur.format(budgetSpent - budgetTotal)}.`
               : "Crea un presupuesto para saber cuánto margen te queda de un vistazo."}
           </p>
         </article>
