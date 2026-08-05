@@ -135,6 +135,16 @@
 	.whatsnew-date{background:#2a2044;color:#c184f0}
 }
 
+/* Presupuesto: alerta visual al acercarse o superar el límite */
+.budget-track span.warn{background:linear-gradient(90deg,#f59e0b,#f97316);box-shadow:0 0 20px rgba(249,115,22,.35)}
+.budget-track span.over{background:linear-gradient(90deg,#ef4444,#c8261f);box-shadow:0 0 20px rgba(220,38,38,.35)}
+
+/* Carrusel de "Dato destacado" */
+.insight-dots{position:relative;z-index:1;display:flex;gap:6px;margin-top:16px}
+.insight-dots button{width:7px;height:7px;padding:0;border:0;border-radius:999px;background:#e4d9ee;cursor:pointer;transition:width .2s ease,background .2s ease}
+.insight-dots button.active{width:18px;background:var(--primary)}
+@media(prefers-color-scheme:dark){.insight-dots button{background:#3a2f4a}}
+
 /* Novedades (What's new) */
 .whatsnew-modal{width:min(480px,100%)}
 .whatsnew-modal .modal-head h2{display:flex;align-items:center;gap:9px;font-size:19px}

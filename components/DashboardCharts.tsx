@@ -11,8 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-
-const COLORS = ["#8b5cf6", "#ec4899", "#3b82f6", "#10b981", "#f59e0b", "#6366f1"];
+import { categoryColor } from "@/lib/utils";
 
 export default function DashboardCharts({
   byCategory,
@@ -36,7 +35,7 @@ export default function DashboardCharts({
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={byCategory} dataKey="value" nameKey="name" innerRadius={66} outerRadius={96} paddingAngle={4} stroke="none">
-                    {byCategory.map((_, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
+                    {byCategory.map((entry) => <Cell key={entry.name} fill={categoryColor(entry.name)} />)}
                   </Pie>
                   <Tooltip formatter={(value: number) => `${value.toFixed(2)} €`} />
                 </PieChart>
@@ -44,9 +43,9 @@ export default function DashboardCharts({
               <div className="donut-label"><strong>{byCategory.length}</strong><span>categorías</span></div>
             </div>
             <div className="category-legend">
-              {byCategory.slice(0, 5).map((item, index) => (
+              {byCategory.slice(0, 5).map((item) => (
                 <div className="legend-row" key={item.name}>
-                  <span className="legend-dot" style={{ background: COLORS[index % COLORS.length] }} />
+                  <span className="legend-dot" style={{ background: categoryColor(item.name) }} />
                   <span>{item.name}</span>
                   <strong>{item.value.toFixed(0)} €</strong>
                 </div>

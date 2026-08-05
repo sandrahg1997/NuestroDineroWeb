@@ -4,7 +4,7 @@ import PageHeader from "@/components/PageHeader";
 import SubmitButton from "@/components/SubmitButton";
 import { getSessionContext } from "@/lib/data";
 import { computePeriodSummary } from "@/lib/period-summary";
-import { eur, formatDateEs } from "@/lib/utils";
+import { categoryColor, eur, formatDateEs } from "@/lib/utils";
 import { ArrowUpRight, PiggyBank, ReceiptText, Star, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -93,7 +93,12 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
             </div>
             {budgetTotal > 0 && <strong>{budgetPercentage}%</strong>}
           </div>
-          <div className="budget-track"><span style={{ width: `${Math.min(100, budgetPercentage)}%` }} /></div>
+          <div className="budget-track">
+            <span
+              className={budgetPercentage >= 100 ? "over" : budgetPercentage >= 85 ? "warn" : ""}
+              style={{ width: `${Math.min(100, budgetPercentage)}%` }}
+            />
+          </div>
         </article>
 
         <article className="insight-card">
@@ -116,9 +121,15 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
       <div className="card recent-card">
         {rows.slice(0, 12).map((row) => {
           const categoryName = row.category?.name ?? "Sin categoría";
+          const iconColor = row.type === "expense" ? categoryColor(categoryName) : undefined;
           return (
             <div className="recent-row" key={row.id}>
-              <div className={`recent-icon ${row.type}`}>{categoryName.slice(0, 1).toUpperCase()}</div>
+              <div
+                className={`recent-icon ${row.type}`}
+                style={iconColor ? { background: `${iconColor}1f`, color: iconColor } : undefined}
+              >
+                {categoryName.slice(0, 1).toUpperCase()}
+              </div>
               <div className="recent-main">
                 <strong>{row.concept}</strong>
                 <span>{categoryName} · {new Date(`${row.date}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>

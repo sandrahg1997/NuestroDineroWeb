@@ -1,10 +1,11 @@
 import AppShell from "@/components/AppShell";
 import DashboardChartsLoader from "@/components/DashboardChartsLoader";
+import InsightCarousel, { type Insight } from "@/components/InsightCarousel";
 import PageHeader from "@/components/PageHeader";
 import SubmitButton from "@/components/SubmitButton";
 import { getSessionContext } from "@/lib/data";
 import { computePeriodSummary } from "@/lib/period-summary";
-import { defaultPeriodName, eur, monthKey } from "@/lib/utils";
+import { categoryColor, defaultPeriodName, eur, monthKey, savingsTier } from "@/lib/utils";
 import { ArrowDownRight, ArrowUpRight, PiggyBank, Plus, ReceiptText, Sparkles, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -68,16 +69,78 @@ export default async function Dashboard() {
 
   const [summary, { data: previousTx }] = await Promise.all([
     computePeriodSummary(supabase, householdId, selectedStart, selectedEnd, periodId),
-    supabase.from("transactions").select("amount,type").eq("household_id", householdId).gte("date", previousStart).lte("date", previousEnd),
+    supabase
+      .from("transactions")
+      .select("amount,type,category:categories(name)")
+      .eq("household_id", householdId)
+      .gte("date", previousStart)
+      .lte("date", previousEnd),
   ]);
 
-  const previousExpense = (previousTx ?? [])
-    .filter((item) => item.type === "expense")
-    .reduce((total, item) => total + Number(item.amount), 0);
+  const previousExpenseRows = ((previousTx ?? []) as unknown as { amount: number | string; type: "expense" | "income"; category: { name?: string } | null }[])
+    .filter((item) => item.type === "expense");
+  const previousExpense = previousExpenseRows.reduce((total, item) => total + Number(item.amount), 0);
+  const previousCategoryMap = new Map<string, number>();
+  for (const item of previousExpenseRows) {
+    const name = item.category?.name ?? "Sin categoría";
+    previousCategoryMap.set(name, (previousCategoryMap.get(name) ?? 0) + Number(item.amount));
+  }
 
   const { rows, expense, income, balance, savingsRate, categoryData, byDay, topCategory, budgetTotal, budgetSpent, budgetPercentage } = summary;
   const expenseChange = percentChange(expense, previousExpense);
   const firstName = user.user_metadata?.display_name?.split(" ")[0] || user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0] || "equipo";
+  const savings = savingsTier(savingsRate);
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const today = new Date(`${todayKey}T12:00:00`);
+  const periodInProgress = todayKey >= selectedStart && todayKey <= selectedEnd;
+
+  const insights: Insight[] = [
+    topCategory
+      ? { icon: "🏆", title: topCategory.name, text: `Es tu categoría con más gasto: ${eur.format(topCategory.value)}.` }
+      : { icon: "🌱", title: "Tu panel está listo", text: "Añade movimientos y empezaremos a encontrar patrones útiles." },
+  ];
+
+  if (periodInProgress) {
+    const daysLeft = Math.max(0, Math.round((rangeEnd.getTime() - today.getTime()) / 86400000));
+    insights.push({
+      icon: "📅",
+      title: daysLeft === 0 ? "Último día" : `${daysLeft} días restantes`,
+      text: daysLeft === 0 ? `Hoy se cierra "${periodLabel}".` : `Quedan ${daysLeft} días para que termine "${periodLabel}".`,
+    });
+
+    const daysElapsed = Math.max(1, Math.round((today.getTime() - rangeStart.getTime()) / 86400000) + 1);
+    const projectedTotal = (expense / daysElapsed) * rangeDays;
+    insights.push(
+      budgetTotal > 0
+        ? {
+            icon: "🔮",
+            title: eur.format(projectedTotal),
+            text:
+              projectedTotal > budgetTotal
+                ? `Al ritmo actual, cerrarás ${eur.format(projectedTotal - budgetTotal)} por encima de tu presupuesto.`
+                : "Al ritmo actual, cerrarás el periodo dentro de tu presupuesto.",
+          }
+        : { icon: "🔮", title: eur.format(projectedTotal), text: "Es tu gasto estimado si mantienes el ritmo actual hasta el final del periodo." }
+    );
+  }
+
+  let growthCategory = "";
+  let growthAmount = 0;
+  for (const item of categoryData) {
+    const diff = item.value - (previousCategoryMap.get(item.name) ?? 0);
+    if (diff > growthAmount) {
+      growthAmount = diff;
+      growthCategory = item.name;
+    }
+  }
+  if (growthCategory) {
+    insights.push({
+      icon: "📈",
+      title: growthCategory,
+      text: `Has gastado ${eur.format(growthAmount)} más que en el periodo anterior en esta categoría.`,
+    });
+  }
 
   return (
     <AppShell households={households}>
@@ -146,9 +209,7 @@ export default async function Dashboard() {
             <p className="metric-label">Tasa de ahorro</p>
             <p className="dashboard-metric-value">{savingsRate}%</p>
           </div>
-          <span className={`metric-badge ${savingsRate >= 20 ? "good" : "neutral"}`}>
-            {savingsRate >= 20 ? "Muy bien" : "En progreso"}
-          </span>
+          <span className={`metric-badge ${savings.className}`}>{savings.label}</span>
         </article>
       </section>
 
@@ -161,7 +222,12 @@ export default async function Dashboard() {
             </div>
             {budgetTotal > 0 && <strong>{budgetPercentage}%</strong>}
           </div>
-          <div className="budget-track"><span style={{ width: `${Math.min(100, budgetPercentage)}%` }} /></div>
+          <div className="budget-track">
+            <span
+              className={budgetPercentage >= 100 ? "over" : budgetPercentage >= 85 ? "warn" : ""}
+              style={{ width: `${Math.min(100, budgetPercentage)}%` }}
+            />
+          </div>
           <p className="budget-caption">
             {budgetTotal > 0
               ? budgetTotal - budgetSpent >= 0
@@ -171,12 +237,7 @@ export default async function Dashboard() {
           </p>
         </article>
 
-        <article className="insight-card">
-          <span className="eyebrow">Dato destacado</span>
-          <div className="insight-icon">{topCategory ? "🏆" : "🌱"}</div>
-          <h2>{topCategory ? topCategory.name : "Tu panel está listo"}</h2>
-          <p>{topCategory ? `Es tu categoría con más gasto: ${eur.format(topCategory.value)}.` : "Añade movimientos y empezaremos a encontrar patrones útiles."}</p>
-        </article>
+        <InsightCarousel insights={insights} />
       </section>
 
       <DashboardChartsLoader byCategory={categoryData} byDay={byDay} />
@@ -192,9 +253,15 @@ export default async function Dashboard() {
       <div className="card recent-card">
         {rows.slice(0, 6).map((row) => {
           const categoryName = row.category?.name ?? "Sin categoría";
+          const iconColor = row.type === "expense" ? categoryColor(categoryName) : undefined;
           return (
             <div className="recent-row" key={row.id}>
-              <div className={`recent-icon ${row.type}`}>{categoryName.slice(0, 1).toUpperCase()}</div>
+              <div
+                className={`recent-icon ${row.type}`}
+                style={iconColor ? { background: `${iconColor}1f`, color: iconColor } : undefined}
+              >
+                {categoryName.slice(0, 1).toUpperCase()}
+              </div>
               <div className="recent-main">
                 <strong>{row.concept}</strong>
                 <span>{categoryName} · {new Date(`${row.date}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>
