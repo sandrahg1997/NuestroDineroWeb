@@ -41,7 +41,12 @@ export async function computePeriodSummary(
       .lte("date", end)
       .order("date", { ascending: false }),
     periodId
-      ? supabase.from("budgets").select("amount,category:categories(name)").eq("household_id", householdId).eq("period_id", periodId)
+      ? supabase
+          .from("budgets")
+          .select("amount,category:categories(name)")
+          .eq("household_id", householdId)
+          .eq("period_id", periodId)
+          .is("category_id", null)
       : Promise.resolve({ data: [] as BudgetRow[] }),
   ]);
 
