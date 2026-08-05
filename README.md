@@ -41,9 +41,14 @@ Rellena:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLICABLE
+SUPABASE_SERVICE_ROLE_KEY=TU_CLAVE_SERVICE_ROLE
 ```
 
-Usa la clave **Publishable/anon**, nunca `service_role` ni una clave secreta en el navegador.
+Usa la clave **Publishable/anon** para las dos primeras, nunca `service_role` ni una clave secreta en el navegador.
+
+`SUPABASE_SERVICE_ROLE_KEY` es la excepción: es secreta, solo se usa en el servidor (la necesita "Eliminar cuenta" en Ajustes para poder borrar el usuario) y **no** lleva el prefijo `NEXT_PUBLIC_`, así que nunca llega al navegador. Cógela de Supabase > Project Settings > API > `service_role`.
+
+Si tu proyecto de Supabase ya existía antes de esta función, ejecuta también `supabase/migrations/2026-08-05-account-deletion.sql` en el SQL Editor; si es un proyecto nuevo, ya viene incluido en `schema.sql`.
 
 ## 3. Ejecutar
 
@@ -63,7 +68,7 @@ npx vercel
 ```
 
 - Crea un proyecto nuevo.
-- Añade en Vercel las dos variables de `.env.local`.
+- Añade en Vercel las tres variables de `.env.local` (marca `SUPABASE_SERVICE_ROLE_KEY` como secreta).
 - Ejecuta `npx vercel --prod`.
 - Copia el dominio final a la configuración de URL de Supabase.
 

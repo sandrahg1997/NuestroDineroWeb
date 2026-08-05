@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -57,6 +58,12 @@ export default function LoginPage() {
 				<button className="btn btn-primary" style={{ width: "100%", marginTop: 18 }} disabled={loading}>
 					{loading ? "Un momento…" : mode === "login" ? "Entrar" : "Crear cuenta"}
 				</button>
+
+				{mode === "login" && (
+					<Link href="/forgot-password" className="subtitle" style={{ display: "block", textAlign: "center", marginTop: 12 }}>
+						¿Olvidaste tu contraseña?
+					</Link>
+				)}
 
 				<button
 					className="btn btn-ghost"

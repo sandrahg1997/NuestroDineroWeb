@@ -42,7 +42,7 @@ create table public.categories (
 );
 create table public.transactions (
   id uuid primary key default gen_random_uuid(), household_id uuid not null references public.households(id) on delete cascade,
-  user_id uuid not null references auth.users(id), concept text not null, amount numeric(12,2) not null check(amount>0),
+  user_id uuid references auth.users(id) on delete set null, concept text not null, amount numeric(12,2) not null check(amount>0),
   date date not null default current_date, category_id uuid references public.categories(id) on delete set null,
   type transaction_type not null, note text not null default '', merchant text not null default '', receipt_text text not null default '',
   recurring_id uuid, created_at timestamptz not null default now()
