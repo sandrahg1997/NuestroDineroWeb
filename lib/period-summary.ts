@@ -46,7 +46,6 @@ export async function computePeriodSummary(
           .select("amount,category:categories(name)")
           .eq("household_id", householdId)
           .eq("period_id", periodId)
-          .is("category_id", null)
       : Promise.resolve({ data: [] as BudgetRow[] }),
   ]);
 
