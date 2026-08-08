@@ -6,7 +6,7 @@ import type { FC } from "react";
 type ByCategory = { name: string; value: number }[];
 type ByDay = { day: string; expense: number; income: number }[];
 
-const DashboardChartsLoader: FC<{ byCategory: ByCategory; byDay: ByDay }> = ({ byCategory, byDay }) => {
+const DashboardChartsLoader: FC<{ byCategory: ByCategory; byDay: ByDay; hideAmounts?: boolean }> = ({ byCategory, byDay, hideAmounts }) => {
   const [Comp, setComp] = useState<any>(null);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ const DashboardChartsLoader: FC<{ byCategory: ByCategory; byDay: ByDay }> = ({ b
   );
 
   const C = Comp;
-  return <C byCategory={byCategory} byDay={byDay} />;
+  return <C byCategory={byCategory} byDay={byDay} hideAmounts={hideAmounts} />;
 };
 
 export default DashboardChartsLoader;

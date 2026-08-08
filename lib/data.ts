@@ -19,13 +19,18 @@ export async function getSessionContext() {
       householdId: null,
       households: [] as HouseholdOption[],
       activePeriod: null as Period | null,
+      hideAmounts: false,
     };
   }
 
-  const { data: householdsData } = await supabase.rpc("get_my_households");
+  const [{ data: householdsData }, { data: prefs }] = await Promise.all([
+    supabase.rpc("get_my_households"),
+    supabase.from("user_preferences").select("hide_amounts").eq("user_id", user.id).maybeSingle(),
+  ]);
   const households = (householdsData ?? []) as HouseholdOption[];
   const active = households.find((h) => h.is_active) ?? households[0] ?? null;
   const householdId = active?.household_id ?? null;
+  const hideAmounts = prefs?.hide_amounts ?? false;
 
   let activePeriod: Period | null = null;
   if (householdId) {
@@ -37,5 +42,5 @@ export async function getSessionContext() {
     activePeriod = ((householdRow?.active_period as unknown as Period | null) ?? null);
   }
 
-  return { supabase, user, householdId, households, activePeriod };
+  return { supabase, user, householdId, households, activePeriod, hideAmounts };
 }

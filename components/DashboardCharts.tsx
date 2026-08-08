@@ -16,9 +16,11 @@ import { categoryColor } from "@/lib/utils";
 export default function DashboardCharts({
   byCategory,
   byDay,
+  hideAmounts,
 }: {
   byCategory: { name: string; value: number }[];
   byDay: { day: string; expense: number; income: number }[];
+  hideAmounts?: boolean;
 }) {
   return (
     <section className="dashboard-charts">
@@ -37,17 +39,17 @@ export default function DashboardCharts({
                   <Pie data={byCategory} dataKey="value" nameKey="name" innerRadius={66} outerRadius={96} paddingAngle={4} stroke="none">
                     {byCategory.map((entry) => <Cell key={entry.name} fill={categoryColor(entry.name)} />)}
                   </Pie>
-                  <Tooltip formatter={(value: number) => `${value.toFixed(2)} €`} />
+                  {!hideAmounts && <Tooltip formatter={(value: number) => `${value.toFixed(2)} €`} />}
                 </PieChart>
               </ResponsiveContainer>
               <div className="donut-label"><strong>{byCategory.length}</strong><span>categorías</span></div>
             </div>
             <div className="category-legend">
-              {byCategory.slice(0, 5).map((item) => (
+              {byCategory.map((item) => (
                 <div className="legend-row" key={item.name}>
                   <span className="legend-dot" style={{ background: categoryColor(item.name) }} />
                   <span>{item.name}</span>
-                  <strong>{item.value.toFixed(0)} €</strong>
+                  <strong className="amount-value">{item.value.toFixed(0)} €</strong>
                 </div>
               ))}
             </div>
@@ -78,7 +80,7 @@ export default function DashboardCharts({
                 </defs>
                 <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "#8b8494", fontSize: 12 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: "#8b8494", fontSize: 12 }} />
-                <Tooltip formatter={(value: number) => `${value.toFixed(2)} €`} />
+                {!hideAmounts && <Tooltip formatter={(value: number) => `${value.toFixed(2)} €`} />}
                 <Area type="monotone" dataKey="expense" name="Gastos" stroke="#ec4899" strokeWidth={3} fill="url(#expenseFill)" />
                 <Area type="monotone" dataKey="income" name="Ingresos" stroke="#10b981" strokeWidth={3} fill="url(#incomeFill)" />
               </AreaChart>

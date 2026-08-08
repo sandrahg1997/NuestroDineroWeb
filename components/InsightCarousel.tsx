@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
-export type Insight = { icon: string; title: string; text: string };
+export type Insight = { icon: string; title: ReactNode; text: ReactNode };
 
 export default function InsightCarousel({ insights }: { insights: Insight[] }) {
   const [index, setIndex] = useState(0);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (insights.length < 2) return;
@@ -13,20 +15,42 @@ export default function InsightCarousel({ insights }: { insights: Insight[] }) {
     return () => clearInterval(id);
   }, [insights.length]);
 
+  useEffect(() => {
+    const track = trackRef.current;
+    const slide = track?.children[index] as HTMLElement | undefined;
+    if (!track || !slide) return;
+    track.scrollTo({ left: slide.offsetLeft, behavior: "smooth" });
+  }, [index]);
+
+  function handleScroll() {
+    const track = trackRef.current;
+    if (!track) return;
+    if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+    scrollTimeout.current = setTimeout(() => {
+      const next = Math.min(insights.length - 1, Math.round(track.scrollLeft / track.clientWidth));
+      setIndex((current) => (current === next ? current : next));
+    }, 120);
+  }
+
   if (!insights.length) return null;
-  const current = insights[Math.min(index, insights.length - 1)];
 
   return (
     <article className="insight-card">
       <span className="eyebrow">Dato destacado</span>
-      <div className="insight-icon">{current.icon}</div>
-      <h2>{current.title}</h2>
-      <p>{current.text}</p>
+      <div className="insight-scroll" ref={trackRef} onScroll={handleScroll}>
+        {insights.map((insight, i) => (
+          <div className="insight-slide" key={i}>
+            <div className="insight-icon">{insight.icon}</div>
+            <h2>{insight.title}</h2>
+            <p>{insight.text}</p>
+          </div>
+        ))}
+      </div>
       {insights.length > 1 && (
         <div className="insight-dots">
           {insights.map((insight, i) => (
             <button
-              key={insight.title}
+              key={i}
               type="button"
               className={i === index ? "active" : ""}
               aria-label={`Ver dato ${i + 1} de ${insights.length}`}

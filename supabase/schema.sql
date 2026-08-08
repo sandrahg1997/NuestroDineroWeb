@@ -22,6 +22,7 @@ create table public.household_members (
 create table public.user_preferences (
   user_id uuid primary key references auth.users(id) on delete cascade,
   active_household_id uuid references public.households(id) on delete set null,
+  hide_amounts boolean not null default false,
   created_at timestamptz not null default now()
 );
 create table public.periods (
@@ -165,6 +166,14 @@ begin
    on conflict(user_id) do update set active_household_id=excluded.active_household_id;
 end $$;
 grant execute on function public.set_active_household(uuid) to authenticated;
+
+create or replace function public.set_hide_amounts(p_hidden boolean) returns void language plpgsql security definer set search_path=public as $$
+begin
+ if auth.uid() is null then raise exception 'No autenticado'; end if;
+ insert into user_preferences(user_id,hide_amounts) values(auth.uid(),p_hidden)
+   on conflict(user_id) do update set hide_amounts=excluded.hide_amounts;
+end $$;
+grant execute on function public.set_hide_amounts(boolean) to authenticated;
 
 create or replace function public.get_my_households()
 returns table(household_id uuid, name text, member_count bigint, is_active boolean, partner_email text)

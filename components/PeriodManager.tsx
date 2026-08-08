@@ -1,8 +1,9 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import Money from "@/components/Money";
 import type { Period } from "@/lib/types";
-import { defaultPeriodName, eur, formatDateEs } from "@/lib/utils";
+import { defaultPeriodName, formatDateEs } from "@/lib/utils";
 import { CalendarRange, LoaderCircle, Pencil, Plus, Star, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -173,9 +174,9 @@ export default function PeriodManager({ householdId, initial, activePeriodId }: 
                   </div>
                   <div className="toolbar" style={{ marginTop: 14, justifyContent: "space-between" }}>
                     <div className="subtitle">
-                      <span className="income" style={{ fontWeight: 750 }}>{eur.format(p.income)}</span> ingresos ·{" "}
-                      <span className="expense" style={{ fontWeight: 750 }}>{eur.format(p.expense)}</span> gastos ·{" "}
-                      balance {eur.format(balance)}
+                      <span className="income" style={{ fontWeight: 750 }}><Money value={p.income} /></span> ingresos ·{" "}
+                      <span className="expense" style={{ fontWeight: 750 }}><Money value={p.expense} /></span> gastos ·{" "}
+                      balance <Money value={balance} />
                     </div>
                   </div>
                   <div className="toolbar" style={{ marginTop: 14, justifyContent: "flex-start" }}>

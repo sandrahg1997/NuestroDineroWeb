@@ -11,7 +11,7 @@ type PeriodTransaction = {
   category: { name?: string } | null;
 };
 
-type BudgetRow = { amount: number | string; category_id: string | null; category?: { name?: string } | null };
+type BudgetRow = { id: string; amount: number | string; category_id: string | null; category?: { name?: string; icon?: string } | null };
 
 export type PeriodSummary = {
   rows: PeriodTransaction[];
@@ -25,6 +25,7 @@ export type PeriodSummary = {
   budgetTotal: number;
   budgetSpent: number;
   budgetPercentage: number;
+  budgets: { id: string; name: string; icon?: string; amount: number; spent: number; percentage: number }[];
 };
 
 export async function computePeriodSummary(
@@ -34,7 +35,7 @@ export async function computePeriodSummary(
   end: string,
   periodId?: string | null
 ): Promise<PeriodSummary> {
-  const [{ data: tx }, { data: budgets }] = await Promise.all([
+  const [{ data: tx }, { data: budgetData }] = await Promise.all([
     supabase
       .from("transactions")
       .select("id,type,amount,date,concept,merchant,category_id,category:categories(name)")
@@ -45,14 +46,14 @@ export async function computePeriodSummary(
     periodId
       ? supabase
           .from("budgets")
-          .select("amount,category_id,category:categories(name)")
+          .select("id,amount,category_id,category:categories(name,icon)")
           .eq("household_id", householdId)
           .eq("period_id", periodId)
       : Promise.resolve({ data: [] as BudgetRow[] }),
   ]);
 
   const rows = (tx ?? []) as unknown as PeriodTransaction[];
-  const budgetRows = (budgets ?? []) as BudgetRow[];
+  const budgetRows = (budgetData ?? []) as BudgetRow[];
 
   const expense = rows.filter((r) => r.type === "expense").reduce((total, r) => total + Number(r.amount), 0);
   const income = rows.filter((r) => r.type === "income").reduce((total, r) => total + Number(r.amount), 0);
@@ -86,6 +87,19 @@ export async function computePeriodSummary(
   const balance = income - expense;
   const savingsRate = income > 0 ? Math.round((balance / income) * 100) : 0;
 
+  const budgets = budgetRows.map((b) => {
+    const amount = Number(b.amount);
+    const spent = b.category_id ? categorySpendById.get(b.category_id) ?? 0 : expense;
+    return {
+      id: b.id,
+      name: b.category?.name ?? "Presupuesto general",
+      icon: b.category?.icon,
+      amount,
+      spent,
+      percentage: amount > 0 ? Math.round((spent / amount) * 100) : 0,
+    };
+  });
+
   return {
     rows,
     expense,
@@ -98,5 +112,6 @@ export async function computePeriodSummary(
     budgetTotal,
     budgetSpent,
     budgetPercentage,
+    budgets,
   };
 }

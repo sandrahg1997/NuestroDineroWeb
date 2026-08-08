@@ -1,10 +1,11 @@
 import AppShell from "@/components/AppShell";
 import DashboardChartsLoader from "@/components/DashboardChartsLoader";
+import Money from "@/components/Money";
 import PageHeader from "@/components/PageHeader";
 import SubmitButton from "@/components/SubmitButton";
 import { getSessionContext } from "@/lib/data";
 import { computePeriodSummary } from "@/lib/period-summary";
-import { categoryColor, eur, formatDateEs } from "@/lib/utils";
+import { categoryColor, formatDateEs } from "@/lib/utils";
 import { ArrowUpRight, PiggyBank, ReceiptText, Star, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -21,7 +22,7 @@ async function markActive(formData: FormData) {
 
 export default async function PeriodDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase, user, householdId, households, activePeriod } = await getSessionContext();
+  const { supabase, user, householdId, households, activePeriod, hideAmounts } = await getSessionContext();
   if (!user) redirect("/login");
   if (!householdId) redirect("/settings");
 
@@ -33,7 +34,7 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
   const isActive = activePeriod?.id === period.id;
 
   return (
-    <AppShell households={households}>
+    <AppShell households={households} hideAmounts={hideAmounts}>
       <PageHeader
         title={period.name}
         subtitle={`${formatDateEs(period.start_date)} – ${formatDateEs(period.end_date)}`}
@@ -51,7 +52,7 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
             </form>
           )}
           <p className="hero-label" style={{ marginTop: 16 }}>Balance del periodo</p>
-          <h1 className={balance >= 0 ? "hero-balance positive" : "hero-balance negative"}>{eur.format(balance)}</h1>
+          <h1 className={balance >= 0 ? "hero-balance positive" : "hero-balance negative"}><Money value={balance} /></h1>
         </div>
         <div className="hero-orb" aria-hidden="true"><WalletCards size={54} /></div>
         <div className="hero-glow hero-glow-one" />
@@ -63,7 +64,7 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
           <div className="metric-icon metric-icon-expense"><ReceiptText size={20} /></div>
           <div>
             <p className="metric-label">Gastado</p>
-            <p className="dashboard-metric-value">{eur.format(expense)}</p>
+            <p className="dashboard-metric-value"><Money value={expense} /></p>
           </div>
         </article>
 
@@ -71,7 +72,7 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
           <div className="metric-icon metric-icon-income"><ArrowUpRight size={20} /></div>
           <div>
             <p className="metric-label">Ingresos</p>
-            <p className="dashboard-metric-value">{eur.format(income)}</p>
+            <p className="dashboard-metric-value"><Money value={income} /></p>
           </div>
         </article>
 
@@ -89,7 +90,7 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
           <div className="section-head dashboard-section-head">
             <div>
               <span className="eyebrow">Presupuesto del periodo</span>
-              <h2>{budgetTotal ? `${eur.format(budgetSpent)} de ${eur.format(budgetTotal)}` : "Sin presupuesto configurado"}</h2>
+              <h2>{budgetTotal ? <><Money value={budgetSpent} /> de <Money value={budgetTotal} /></> : "Sin presupuesto configurado"}</h2>
             </div>
             {budgetTotal > 0 && <strong>{budgetPercentage}%</strong>}
           </div>
@@ -105,11 +106,11 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
           <span className="eyebrow">Dato destacado</span>
           <div className="insight-icon">{topCategory ? "🏆" : "🌱"}</div>
           <h2>{topCategory ? topCategory.name : "Sin datos"}</h2>
-          <p>{topCategory ? `Es tu categoría con más gasto: ${eur.format(topCategory.value)}.` : "No hay movimientos en este periodo."}</p>
+          <p>{topCategory ? <>Es tu categoría con más gasto: <Money value={topCategory.value} />.</> : "No hay movimientos en este periodo."}</p>
         </article>
       </section>
 
-      <DashboardChartsLoader byCategory={categoryData} byDay={byDay} />
+      <DashboardChartsLoader byCategory={categoryData} byDay={byDay} hideAmounts={hideAmounts} />
 
       <div className="section-head recent-head">
         <div>
@@ -135,7 +136,7 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
                 <span>{categoryName} · {new Date(`${row.date}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>
               </div>
               <strong className={row.type === "expense" ? "expense" : "income"}>
-                {row.type === "expense" ? "−" : "+"}{eur.format(Number(row.amount))}
+                {row.type === "expense" ? "−" : "+"}<Money value={Number(row.amount)} />
               </strong>
             </div>
           );

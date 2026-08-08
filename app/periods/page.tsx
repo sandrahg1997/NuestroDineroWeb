@@ -5,7 +5,7 @@ import { getSessionContext } from "@/lib/data";
 import { redirect } from "next/navigation";
 
 export default async function Page() {
-  const { supabase, user, householdId, households, activePeriod } = await getSessionContext();
+  const { supabase, user, householdId, households, activePeriod, hideAmounts } = await getSessionContext();
   if (!user) redirect("/login");
   if (!householdId) redirect("/settings");
 
@@ -24,7 +24,7 @@ export default async function Page() {
   });
 
   return (
-    <AppShell households={households}>
+    <AppShell households={households} hideAmounts={hideAmounts}>
       <PageHeader title="Periodos" subtitle="Crea, edita y consulta el histórico de periodos de vuestro espacio." />
       <PeriodManager householdId={householdId} initial={withSummary as any} activePeriodId={activePeriod?.id ?? null} />
     </AppShell>

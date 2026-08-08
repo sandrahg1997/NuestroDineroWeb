@@ -1,11 +1,12 @@
 import AppShell from "@/components/AppShell";
 import DashboardChartsLoader from "@/components/DashboardChartsLoader";
 import InsightCarousel, { type Insight } from "@/components/InsightCarousel";
+import Money from "@/components/Money";
 import PageHeader from "@/components/PageHeader";
 import SubmitButton from "@/components/SubmitButton";
 import { getSessionContext } from "@/lib/data";
 import { computePeriodSummary } from "@/lib/period-summary";
-import { categoryColor, defaultPeriodName, eur, monthKey, savingsTier } from "@/lib/utils";
+import { categoryColor, defaultPeriodName, monthKey, savingsTier } from "@/lib/utils";
 import { ArrowDownRight, ArrowUpRight, PiggyBank, Plus, ReceiptText, Sparkles, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -44,7 +45,7 @@ function percentChange(current: number, previous: number) {
 }
 
 export default async function Dashboard() {
-  const { supabase, user, householdId, households, activePeriod } = await getSessionContext();
+  const { supabase, user, householdId, households, activePeriod, hideAmounts } = await getSessionContext();
   if (!user) redirect("/login");
   if (!householdId) redirect("/settings");
 
@@ -86,7 +87,7 @@ export default async function Dashboard() {
     previousCategoryMap.set(name, (previousCategoryMap.get(name) ?? 0) + Number(item.amount));
   }
 
-  const { rows, expense, income, balance, savingsRate, categoryData, byDay, topCategory, budgetTotal, budgetSpent, budgetPercentage } = summary;
+  const { rows, expense, income, balance, savingsRate, categoryData, byDay, topCategory, budgetTotal, budgets } = summary;
   const expenseChange = percentChange(expense, previousExpense);
   const firstName = user.user_metadata?.display_name?.split(" ")[0] || user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0] || "equipo";
   const savings = savingsTier(savingsRate);
@@ -97,7 +98,7 @@ export default async function Dashboard() {
 
   const insights: Insight[] = [
     topCategory
-      ? { icon: "🏆", title: topCategory.name, text: `Es tu categoría con más gasto: ${eur.format(topCategory.value)}.` }
+      ? { icon: "🏆", title: topCategory.name, text: <>Es tu categoría con más gasto: <Money value={topCategory.value} />.</> }
       : { icon: "🌱", title: "Tu panel está listo", text: "Añade movimientos y empezaremos a encontrar patrones útiles." },
   ];
 
@@ -115,13 +116,13 @@ export default async function Dashboard() {
       budgetTotal > 0
         ? {
             icon: "🔮",
-            title: eur.format(projectedTotal),
+            title: <Money value={projectedTotal} />,
             text:
               projectedTotal > budgetTotal
-                ? `Al ritmo actual, cerrarás ${eur.format(projectedTotal - budgetTotal)} por encima de tu presupuesto.`
+                ? <>Al ritmo actual, cerrarás <Money value={projectedTotal - budgetTotal} /> por encima de tu presupuesto.</>
                 : "Al ritmo actual, cerrarás el periodo dentro de tu presupuesto.",
           }
-        : { icon: "🔮", title: eur.format(projectedTotal), text: "Es tu gasto estimado si mantienes el ritmo actual hasta el final del periodo." }
+        : { icon: "🔮", title: <Money value={projectedTotal} />, text: "Es tu gasto estimado si mantienes el ritmo actual hasta el final del periodo." }
     );
   }
 
@@ -138,12 +139,12 @@ export default async function Dashboard() {
     insights.push({
       icon: "📈",
       title: growthCategory,
-      text: `Has gastado ${eur.format(growthAmount)} más que en el periodo anterior en esta categoría.`,
+      text: <>Has gastado <Money value={growthAmount} /> más que en el periodo anterior en esta categoría.</>,
     });
   }
 
   return (
-    <AppShell households={households}>
+    <AppShell households={households} hideAmounts={hideAmounts}>
       <PageHeader
         title={`Hola, ${firstName} 👋`}
         subtitle={periodLabel}
@@ -166,7 +167,7 @@ export default async function Dashboard() {
             </form>
           </div>
           <p className="hero-label">Balance disponible</p>
-          <h1 className={balance >= 0 ? "hero-balance positive" : "hero-balance negative"}>{eur.format(balance)}</h1>
+          <h1 className={balance >= 0 ? "hero-balance positive" : "hero-balance negative"}><Money value={balance} strong /></h1>
           <div className="hero-trend">
             {expenseChange <= 0 ? <ArrowDownRight size={17} /> : <ArrowUpRight size={17} />}
             <span>{Math.abs(Math.round(expenseChange))}% de gasto {expenseChange <= 0 ? "menos" : "más"} que el periodo anterior</span>
@@ -187,7 +188,7 @@ export default async function Dashboard() {
           <div className="metric-icon metric-icon-expense"><ReceiptText size={20} /></div>
           <div>
             <p className="metric-label">Gastado este periodo</p>
-            <p className="dashboard-metric-value">{eur.format(expense)}</p>
+            <p className="dashboard-metric-value"><Money value={expense} /></p>
           </div>
           <span className={`metric-badge ${expenseChange <= 0 ? "good" : "warn"}`}>
             {expenseChange <= 0 ? "↓" : "↑"} {Math.abs(Math.round(expenseChange))}%
@@ -198,7 +199,7 @@ export default async function Dashboard() {
           <div className="metric-icon metric-icon-income"><ArrowUpRight size={20} /></div>
           <div>
             <p className="metric-label">Ingresos</p>
-            <p className="dashboard-metric-value">{eur.format(income)}</p>
+            <p className="dashboard-metric-value"><Money value={income} /></p>
           </div>
           <span className="metric-badge good">Este periodo</span>
         </article>
@@ -216,31 +217,40 @@ export default async function Dashboard() {
       <section className="dashboard-insights">
         <article className="budget-card">
           <div className="section-head dashboard-section-head">
-            <div>
-              <span className="eyebrow">Presupuesto del periodo</span>
-              <h2>{budgetTotal ? `${eur.format(budgetSpent)} de ${eur.format(budgetTotal)}` : "Sin presupuesto configurado"}</h2>
+            <span className="eyebrow">Presupuesto del periodo</span>
+          </div>
+          {budgets.length > 0 ? (
+            <div className="budget-list">
+              {budgets.map((b) => (
+                <div className="budget-item" key={b.id}>
+                  <div className="budget-item-head">
+                    <span className="budget-item-name">{b.icon ? `${b.icon} ` : ""}{b.name}</span>
+                    <strong>{b.percentage}%</strong>
+                  </div>
+                  <div className="budget-track">
+                    <span
+                      className={b.percentage >= 100 ? "over" : b.percentage >= 85 ? "warn" : ""}
+                      style={{ width: `${Math.min(100, b.percentage)}%` }}
+                    />
+                  </div>
+                  <p className="budget-caption">
+                    <Money value={b.spent} /> de <Money value={b.amount} /> ·{" "}
+                    {b.amount - b.spent >= 0
+                      ? <>te quedan <Money value={b.amount - b.spent} /></>
+                      : <>superado en <Money value={b.spent - b.amount} /></>}
+                  </p>
+                </div>
+              ))}
             </div>
-            {budgetTotal > 0 && <strong>{budgetPercentage}%</strong>}
-          </div>
-          <div className="budget-track">
-            <span
-              className={budgetPercentage >= 100 ? "over" : budgetPercentage >= 85 ? "warn" : ""}
-              style={{ width: `${Math.min(100, budgetPercentage)}%` }}
-            />
-          </div>
-          <p className="budget-caption">
-            {budgetTotal > 0
-              ? budgetTotal - budgetSpent >= 0
-                ? `Te quedan ${eur.format(budgetTotal - budgetSpent)} para terminar el periodo.`
-                : `Has superado el presupuesto en ${eur.format(budgetSpent - budgetTotal)}.`
-              : "Crea un presupuesto para saber cuánto margen te queda de un vistazo."}
-          </p>
+          ) : (
+            <p className="budget-caption">Crea un presupuesto para saber cuánto margen te queda de un vistazo.</p>
+          )}
         </article>
 
         <InsightCarousel insights={insights} />
       </section>
 
-      <DashboardChartsLoader byCategory={categoryData} byDay={byDay} />
+      <DashboardChartsLoader byCategory={categoryData} byDay={byDay} hideAmounts={hideAmounts} />
 
       <div className="section-head recent-head">
         <div>
@@ -267,7 +277,7 @@ export default async function Dashboard() {
                 <span>{categoryName} · {new Date(`${row.date}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>
               </div>
               <strong className={row.type === "expense" ? "expense" : "income"}>
-                {row.type === "expense" ? "−" : "+"}{eur.format(Number(row.amount))}
+                {row.type === "expense" ? "−" : "+"}<Money value={Number(row.amount)} />
               </strong>
             </div>
           );

@@ -5,7 +5,7 @@ import { getSessionContext } from "@/lib/data";
 import { redirect } from "next/navigation";
 
 export default async function Page() {
-  const { supabase, user, householdId, households, activePeriod } = await getSessionContext();
+  const { supabase, user, householdId, households, activePeriod, hideAmounts } = await getSessionContext();
   if (!user) redirect("/login");
   if (!householdId) redirect("/settings");
   if (!activePeriod) redirect("/periods");
@@ -20,7 +20,7 @@ export default async function Page() {
   for (const x of t ?? []) if (x.category_id) spending[x.category_id] = (spending[x.category_id] ?? 0) + Number(x.amount);
 
   return (
-    <AppShell households={households}>
+    <AppShell households={households} hideAmounts={hideAmounts}>
       <PageHeader title="Presupuestos" subtitle={`Control del periodo, general y por categoría · ${activePeriod.name}`} />
       <BudgetManager householdId={householdId} periodId={activePeriod.id} periodLabel={activePeriod.name} initial={(b ?? []) as any} categories={(c ?? []) as any} spending={spending} />
     </AppShell>

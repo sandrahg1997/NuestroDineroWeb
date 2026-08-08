@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Category, Transaction, TransactionType } from "@/lib/types";
-import { eur } from "@/lib/utils";
+import Money from "@/components/Money";
 import { Inbox, LoaderCircle, MoreVertical, Pencil, Plus, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
@@ -251,7 +251,7 @@ export default function TransactionManager({ householdId, userId, initial, initi
                     <span className="pill">{r.category?.icon} {r.category?.name ?? "Sin categoría"}</span>
                   </td>
                   <td className={r.type === "expense" ? "expense" : "income"}>{r.type === "expense" ? "Gasto" : "Ingreso"}</td>
-                  <td>{eur.format(r.amount)}</td>
+                  <td><Money value={r.amount} /></td>
                   <td>
                     <div className="chip-row" style={{ justifyContent: "flex-end" }}>
                       <button className="btn btn-ghost" onClick={() => edit(r)} disabled={deletingId === r.id}><Pencil size={16} /></button>
@@ -292,7 +292,7 @@ export default function TransactionManager({ householdId, userId, initial, initi
                     </div>
                     <div className="right">
                       <span className={`amount ${r.type === "expense" ? "expense" : "income"}`}>
-                        {r.type === "expense" ? "-" : "+"}{eur.format(Math.abs(r.amount))}
+                        {r.type === "expense" ? "-" : "+"}<Money value={Math.abs(r.amount)} />
                       </span>
                       <div className="row-menu" onClick={(e) => e.stopPropagation()}>
                         <button type="button" className="btn btn-ghost" onClick={() => setMenuFor(menuFor === r.id ? null : r.id)}>

@@ -5,7 +5,7 @@ import type { HouseholdOption } from "@/lib/data";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useState } from "react";
-import { LayoutDashboard, ReceiptText, Tags, Repeat2, PiggyBank, ScanLine, CalendarRange, Settings, Plus, MoreHorizontal, Users } from "lucide-react";
+import { LayoutDashboard, ReceiptText, Tags, Repeat2, PiggyBank, ScanLine, CalendarRange, Settings, Plus, MoreHorizontal, Users, Eye, EyeOff } from "lucide-react";
 import WhatsNewModal from "./WhatsNewModal";
 
 const items = [
@@ -24,10 +24,11 @@ function householdLabel(h: HouseholdOption) {
   return "Personal";
 }
 
-export default function AppShell({ children, households = [] }: { children: ReactNode; households?: HouseholdOption[] }) {
+export default function AppShell({ children, households = [], hideAmounts = false }: { children: ReactNode; households?: HouseholdOption[]; hideAmounts?: boolean }) {
   const pathname = usePathname();
   const [more, setMore] = useState(false);
   const [switching, setSwitching] = useState(false);
+  const [hidden, setHidden] = useState(hideAmounts);
 
   const primary = items.slice(0, 4);
   const secondary = items.slice(4);
@@ -48,8 +49,27 @@ export default function AppShell({ children, households = [] }: { children: Reac
     window.location.reload();
   }
 
+  async function toggleHideAmounts() {
+    const next = !hidden;
+    setHidden(next);
+    const s = createClient();
+    const { error } = await s.rpc("set_hide_amounts", { p_hidden: next });
+    if (error) {
+      setHidden(!next);
+      alert(error.message);
+    }
+  }
+
+  const privacyLabel = hidden ? "Mostrar importes" : "Ocultar importes";
+  const privacyButton = (
+    <button type="button" className={`privacy-toggle ${hidden ? "active" : ""}`} onClick={toggleHideAmounts} aria-pressed={hidden}>
+      {hidden ? <EyeOff size={19} /> : <Eye size={19} />}
+      {privacyLabel}
+    </button>
+  );
+
   return (
-    <div className="shell">
+    <div className={`shell ${hidden ? "hide-amounts" : ""}`}>
       <WhatsNewModal />
       <aside className="sidebar">
         <div className="brand">
@@ -67,6 +87,8 @@ export default function AppShell({ children, households = [] }: { children: Reac
             </Link>
           ))}
         </nav>
+
+        {privacyButton}
       </aside>
 
       <main className="main">
@@ -116,6 +138,7 @@ export default function AppShell({ children, households = [] }: { children: Reac
         <>
           <div className="mobile-more-backdrop" onClick={() => setMore(false)} />
           <div id="mobile-more-menu" className="mobile-more-popup" role="menu">
+            {privacyButton}
             {secondary.map(([href, Icon, label]) => (
               <Link href={href} key={href} onClick={() => setMore(false)} className={pathname.startsWith(href) ? "active" : ""}>
                 <Icon size={18} />
