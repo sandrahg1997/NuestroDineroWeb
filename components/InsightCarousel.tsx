@@ -10,12 +10,6 @@ export default function InsightCarousel({ insights }: { insights: Insight[] }) {
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (insights.length < 2) return;
-    const id = setInterval(() => setIndex((current) => (current + 1) % insights.length), 6000);
-    return () => clearInterval(id);
-  }, [insights.length]);
-
-  useEffect(() => {
     const track = trackRef.current;
     const slide = track?.children[index] as HTMLElement | undefined;
     if (!track || !slide) return;

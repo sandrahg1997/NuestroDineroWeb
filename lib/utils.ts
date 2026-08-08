@@ -1,5 +1,13 @@
 export const eur = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
 export function monthKey(date = new Date()) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-01`; }
+export function dateKey(date = new Date()) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`; }
+export function relativeDayLabel(value: string) {
+  if (value === dateKey()) return "Hoy";
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (value === dateKey(yesterday)) return "Ayer";
+  return new Date(`${value}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+}
 export function cn(...classes: Array<string | false | null | undefined>) { return classes.filter(Boolean).join(" "); }
 
 const CATEGORY_PALETTE = ["#8b5cf6", "#ec4899", "#3b82f6", "#10b981", "#f59e0b", "#6366f1", "#14b8a6", "#f43f5e"];

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Category, Transaction, TransactionType } from "@/lib/types";
 import Money from "@/components/Money";
+import { dateKey } from "@/lib/utils";
 import { Inbox, LoaderCircle, MoreVertical, Pencil, Plus, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
@@ -21,7 +22,7 @@ type Form = {
 const blank = (type: TransactionType = "expense"): Form => ({
   concept: "",
   amount: "",
-  date: new Date().toISOString().slice(0, 10),
+  date: dateKey(),
   category_id: "",
   type,
   note: "",
@@ -88,6 +89,10 @@ export default function TransactionManager({ householdId, userId, initial, initi
         return bDate.localeCompare(aDate);
       });
   }, [rows, query, type, category, dateFrom, dateTo, sort]);
+
+  const isFiltering = !!query || activeFilterCount > 0;
+  const filteredExpense = useMemo(() => filtered.filter((r) => r.type === "expense").reduce((total, r) => total + Number(r.amount), 0), [filtered]);
+  const filteredIncome = useMemo(() => filtered.filter((r) => r.type === "income").reduce((total, r) => total + Number(r.amount), 0), [filtered]);
 
   const dateLabel = (value: string | null | undefined) => {
     if (!value) return "Sin fecha";
@@ -213,8 +218,8 @@ export default function TransactionManager({ householdId, userId, initial, initi
           <option value="">Todas las categorías</option>
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <input className="input" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-        <input className="input" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+        <input className="input" type="date" placeholder="Desde" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+        <input className="input" type="date" placeholder="Hasta" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
         <select className="select" style={{ width: "100%" }} value={sort} onChange={(e) => setSort(e.target.value)}>
           <option value="date_desc">Más recientes</option>
           <option value="date_asc">Más antiguos</option>
@@ -225,6 +230,14 @@ export default function TransactionManager({ householdId, userId, initial, initi
           <button type="button" className="btn btn-ghost" onClick={clearFilters}>Limpiar filtros</button>
         )}
       </div>
+
+      {isFiltering && (
+        <div className="filter-summary">
+          <span>{filtered.length} movimiento{filtered.length === 1 ? "" : "s"}</span>
+          {filteredExpense > 0 && <span className="expense">Gastado <Money value={filteredExpense} /></span>}
+          {filteredIncome > 0 && <span className="income">Ingresado <Money value={filteredIncome} /></span>}
+        </div>
+      )}
 
       <div className="card table-wrap">
         {filtered.length ? (

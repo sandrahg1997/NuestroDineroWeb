@@ -75,7 +75,7 @@
 .transaction-toolbar-top{display:flex;gap:10px;align-items:center}
 .transaction-toolbar-top .search-input{flex:1 1 240px}
 .filters-toggle{display:inline-flex;position:relative;white-space:nowrap}
-.filter-badge{background:var(--primary);color:#fff;border-radius:999px;font-size:11px;font-weight:800;min-width:18px;height:18px;display:inline-grid;place-items:center;padding:0 5px}
+.filter-badge{background:var(--primary);color:#fff;border-radius:999px;font-size:11px;font-weight:800;min-width:18px;height:18px;display:inline-grid;place-items:center;padding:0 5px}.filter-summary{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding:11px 15px;background:#f6f1fa;border-radius:12px;font-size:13px;color:var(--muted);font-weight:650}.filter-summary .expense{color:var(--expense)}.filter-summary .income{color:var(--income)}
 .transaction-toolbar{display:grid;max-height:0;overflow:hidden;opacity:0;margin:0 !important;transition:max-height .25s ease,opacity .2s ease}
 .transaction-toolbar.open{max-height:600px;opacity:1;margin-bottom:16px !important}
 
@@ -108,6 +108,7 @@
 	.privacy-toggle:hover,.privacy-toggle.active{background:#2a2138}
 	.input,.select,.textarea{background:#241e30}
 	.chip{background:#1e1929}
+	.filter-summary{background:#241e30}
 	.chip.active{background:#3a2a4d;border-color:#5b3f75}
 	.pill{background:#2a2438}
 	.modal,.login-card{background:#1e1929}

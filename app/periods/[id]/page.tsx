@@ -5,7 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import SubmitButton from "@/components/SubmitButton";
 import { getSessionContext } from "@/lib/data";
 import { computePeriodSummary } from "@/lib/period-summary";
-import { categoryColor, formatDateEs } from "@/lib/utils";
+import { categoryColor, formatDateEs, relativeDayLabel } from "@/lib/utils";
 import { ArrowUpRight, PiggyBank, ReceiptText, Star, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -133,7 +133,7 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
               </div>
               <div className="recent-main">
                 <strong>{row.concept}</strong>
-                <span>{categoryName} · {new Date(`${row.date}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>
+                <span>{categoryName} · {relativeDayLabel(row.date)}</span>
               </div>
               <strong className={row.type === "expense" ? "expense" : "income"}>
                 {row.type === "expense" ? "−" : "+"}<Money value={Number(row.amount)} />

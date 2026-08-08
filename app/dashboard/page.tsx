@@ -6,7 +6,7 @@ import PageHeader from "@/components/PageHeader";
 import SubmitButton from "@/components/SubmitButton";
 import { getSessionContext } from "@/lib/data";
 import { computePeriodSummary } from "@/lib/period-summary";
-import { categoryColor, defaultPeriodName, monthKey, savingsTier } from "@/lib/utils";
+import { categoryColor, dateKey, defaultPeriodName, monthKey, relativeDayLabel, savingsTier } from "@/lib/utils";
 import { ArrowDownRight, ArrowUpRight, PiggyBank, Plus, ReceiptText, Sparkles, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -53,7 +53,7 @@ export default async function Dashboard() {
   // por defecto hasta que el usuario pulse "Aplicar", momento en que se crea uno.
   const defaultStart = monthKey();
   const currentStart = new Date(`${defaultStart}T12:00:00`);
-  const defaultEnd = new Date(currentStart.getFullYear(), currentStart.getMonth() + 1, 0).toISOString().slice(0, 10);
+  const defaultEnd = dateKey(new Date(currentStart.getFullYear(), currentStart.getMonth() + 1, 0));
 
   const selectedStart = activePeriod?.start_date ?? defaultStart;
   const selectedEnd = activePeriod?.end_date ?? defaultEnd;
@@ -92,7 +92,7 @@ export default async function Dashboard() {
   const firstName = user.user_metadata?.display_name?.split(" ")[0] || user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0] || "equipo";
   const savings = savingsTier(savingsRate);
 
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = dateKey();
   const today = new Date(`${todayKey}T12:00:00`);
   const periodInProgress = todayKey >= selectedStart && todayKey <= selectedEnd;
 
@@ -274,7 +274,7 @@ export default async function Dashboard() {
               </div>
               <div className="recent-main">
                 <strong>{row.concept}</strong>
-                <span>{categoryName} · {new Date(`${row.date}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>
+                <span>{categoryName} · {relativeDayLabel(row.date)}</span>
               </div>
               <strong className={row.type === "expense" ? "expense" : "income"}>
                 {row.type === "expense" ? "−" : "+"}<Money value={Number(row.amount)} />

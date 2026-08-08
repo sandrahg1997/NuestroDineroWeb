@@ -42,7 +42,8 @@ export async function computePeriodSummary(
       .eq("household_id", householdId)
       .gte("date", start)
       .lte("date", end)
-      .order("date", { ascending: false }),
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false }),
     periodId
       ? supabase
           .from("budgets")

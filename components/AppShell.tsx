@@ -12,7 +12,7 @@ const items = [
   ["/dashboard", LayoutDashboard, "Inicio"],
   ["/transactions", ReceiptText, "Movimientos"],
   ["/categories", Tags, "Categorías"],
-  // ["/scan", ScanLine, "Escanear"],
+  ["/scan", ScanLine, "Escanear"],
   ["/recurring", Repeat2, "Recurrentes"],
   ["/budgets", PiggyBank, "Presupuestos"],
   ["/periods", CalendarRange, "Periodos"],
