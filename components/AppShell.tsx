@@ -20,8 +20,8 @@ const items = [
 ] as const;
 
 function householdLabel(h: HouseholdOption) {
-  if (h.member_count > 1) return h.partner_email ? `Compartido con ${h.partner_email.split("@")[0]}` : "Compartido";
-  return "Personal";
+  if (h.member_count > 1) return h.partner_email ? `${h.name} · con ${h.partner_email.split("@")[0]}` : h.name;
+  return h.name;
 }
 
 export default function AppShell({ children, households = [], hideAmounts = false }: { children: ReactNode; households?: HouseholdOption[]; hideAmounts?: boolean }) {

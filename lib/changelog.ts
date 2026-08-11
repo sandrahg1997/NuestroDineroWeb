@@ -8,6 +8,16 @@ export type ChangelogEntry = {
 // `version` debe ser único y ordenable (usamos fecha YYYY-MM-DD); `date` es el texto que se muestra.
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-08-11",
+    date: "11 de agosto de 2026",
+    items: [
+      "Nuevo: puedes importar movimientos desde un CSV en Ajustes, con el mismo formato que usa la exportación.",
+      "Nuevo: puedes cambiar el nombre de cada uno de tus espacios en Ajustes; ahora se distinguen por su nombre en el selector del menú lateral.",
+      "Nuevo: puedes eliminar un espacio que ya no uses desde la Zona de peligro en Ajustes.",
+      "Nuevo: en Inicio, pulsa en Gastos, Ingresos, tu categoría más gastada o cualquier presupuesto para ir directamente a Movimientos con ese filtro ya aplicado.",
+    ],
+  },
+  {
     version: "2026-08-05-2",
     date: "5 de agosto de 2026",
     items: [

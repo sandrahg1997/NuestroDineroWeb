@@ -92,13 +92,27 @@ export default async function Dashboard() {
   const firstName = user.user_metadata?.display_name?.split(" ")[0] || user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0] || "equipo";
   const savings = savingsTier(savingsRate);
 
+  function transactionsLink(type?: "expense" | "income", categoryId?: string | null) {
+    const qs = new URLSearchParams();
+    if (type) qs.set("type", type);
+    if (categoryId) qs.set("category", categoryId);
+    qs.set("from", selectedStart);
+    qs.set("to", selectedEnd);
+    return `/transactions?${qs.toString()}`;
+  }
+
   const todayKey = dateKey();
   const today = new Date(`${todayKey}T12:00:00`);
   const periodInProgress = todayKey >= selectedStart && todayKey <= selectedEnd;
 
   const insights: Insight[] = [
     topCategory
-      ? { icon: "🏆", title: topCategory.name, text: <>Es tu categoría con más gasto: <Money value={topCategory.value} />.</> }
+      ? {
+          icon: "🏆",
+          title: topCategory.name,
+          text: <>Es tu categoría con más gasto: <Money value={topCategory.value} />.</>,
+          href: transactionsLink("expense", topCategory.categoryId),
+        }
       : { icon: "🌱", title: "Tu panel está listo", text: "Añade movimientos y empezaremos a encontrar patrones útiles." },
   ];
 
@@ -184,7 +198,7 @@ export default async function Dashboard() {
       </div>
 
       <section className="dashboard-metrics">
-        <article className="dashboard-metric-card">
+        <Link href={transactionsLink("expense")} className="dashboard-metric-card">
           <div className="metric-icon metric-icon-expense"><ReceiptText size={20} /></div>
           <div>
             <p className="metric-label">Gastado este periodo</p>
@@ -193,16 +207,16 @@ export default async function Dashboard() {
           <span className={`metric-badge ${expenseChange <= 0 ? "good" : "warn"}`}>
             {expenseChange <= 0 ? "↓" : "↑"} {Math.abs(Math.round(expenseChange))}%
           </span>
-        </article>
+        </Link>
 
-        <article className="dashboard-metric-card">
+        <Link href={transactionsLink("income")} className="dashboard-metric-card">
           <div className="metric-icon metric-icon-income"><ArrowUpRight size={20} /></div>
           <div>
             <p className="metric-label">Ingresos</p>
             <p className="dashboard-metric-value"><Money value={income} /></p>
           </div>
           <span className="metric-badge good">Este periodo</span>
-        </article>
+        </Link>
 
         <article className="dashboard-metric-card">
           <div className="metric-icon metric-icon-saving"><PiggyBank size={20} /></div>
@@ -222,7 +236,11 @@ export default async function Dashboard() {
           {budgets.length > 0 ? (
             <div className="budget-list">
               {budgets.map((b) => (
-                <div className="budget-item" key={b.id}>
+                <Link
+                  href={transactionsLink("expense", b.categoryId)}
+                  className="budget-item"
+                  key={b.id}
+                >
                   <div className="budget-item-head">
                     <span className="budget-item-name">{b.icon ? `${b.icon} ` : ""}{b.name}</span>
                     <strong>{b.percentage}%</strong>
@@ -239,7 +257,7 @@ export default async function Dashboard() {
                       ? <>te quedan <Money value={b.amount - b.spent} /></>
                       : <>superado en <Money value={b.spent - b.amount} /></>}
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (

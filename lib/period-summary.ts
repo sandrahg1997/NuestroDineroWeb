@@ -19,13 +19,13 @@ export type PeriodSummary = {
   income: number;
   balance: number;
   savingsRate: number;
-  categoryData: { name: string; value: number }[];
+  categoryData: { name: string; value: number; categoryId: string | null }[];
   byDay: { day: string; expense: number; income: number }[];
-  topCategory?: { name: string; value: number };
+  topCategory?: { name: string; value: number; categoryId: string | null };
   budgetTotal: number;
   budgetSpent: number;
   budgetPercentage: number;
-  budgets: { id: string; name: string; icon?: string; amount: number; spent: number; percentage: number }[];
+  budgets: { id: string; name: string; icon?: string; amount: number; spent: number; percentage: number; categoryId: string | null }[];
 };
 
 export async function computePeriodSummary(
@@ -61,6 +61,7 @@ export async function computePeriodSummary(
 
   const categoryMap = new Map<string, number>();
   const categorySpendById = new Map<string, number>();
+  const categoryIdByName = new Map<string, string | null>();
   const dayMap = new Map<string, { day: string; expense: number; income: number }>();
 
   for (const row of rows) {
@@ -72,13 +73,16 @@ export async function computePeriodSummary(
     if (row.type === "expense") {
       const categoryName = row.category?.name ?? "Sin categoría";
       categoryMap.set(categoryName, (categoryMap.get(categoryName) ?? 0) + Number(row.amount));
+      categoryIdByName.set(categoryName, row.category_id);
       if (row.category_id) {
         categorySpendById.set(row.category_id, (categorySpendById.get(row.category_id) ?? 0) + Number(row.amount));
       }
     }
   }
 
-  const categoryData = [...categoryMap].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  const categoryData = [...categoryMap]
+    .map(([name, value]) => ({ name, value, categoryId: categoryIdByName.get(name) ?? null }))
+    .sort((a, b) => b.value - a.value);
   const budgetTotal = budgetRows.reduce((total, b) => total + Number(b.amount), 0);
   const budgetSpent = budgetRows.reduce(
     (total, b) => total + (b.category_id ? categorySpendById.get(b.category_id) ?? 0 : expense),
@@ -98,6 +102,7 @@ export async function computePeriodSummary(
       amount,
       spent,
       percentage: amount > 0 ? Math.round((spent / amount) * 100) : 0,
+      categoryId: b.category_id,
     };
   });
 

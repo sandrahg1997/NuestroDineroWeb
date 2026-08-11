@@ -43,12 +43,25 @@ export default function TransactionManager({ householdId, userId, initial, initi
   const [busy, setBusy] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [menuOpenUp, setMenuOpenUp] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const params = useSearchParams();
 
   useEffect(() => {
     const n = params.get("new");
     if (n === "expense" || n === "income") setForm(blank(n));
+  }, [params]);
+
+  useEffect(() => {
+    const t = params.get("type");
+    const c = params.get("category");
+    const from = params.get("from");
+    const to = params.get("to");
+    if (t === "expense" || t === "income") setType(t);
+    if (c) setCategory(c);
+    if (from) setDateFrom(from);
+    if (to) setDateTo(to);
+    if (t || c || from || to) setFiltersOpen(true);
   }, [params]);
 
   useEffect(() => {
@@ -218,8 +231,14 @@ export default function TransactionManager({ householdId, userId, initial, initi
           <option value="">Todas las categorías</option>
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <input className="input" type="date" placeholder="Desde" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-        <input className="input" type="date" placeholder="Hasta" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+        <div className="field">
+          <label>Desde</label>
+          <input className="input" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Hasta</label>
+          <input className="input" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+        </div>
         <select className="select" style={{ width: "100%" }} value={sort} onChange={(e) => setSort(e.target.value)}>
           <option value="date_desc">Más recientes</option>
           <option value="date_asc">Más antiguos</option>
@@ -308,11 +327,23 @@ export default function TransactionManager({ householdId, userId, initial, initi
                         {r.type === "expense" ? "-" : "+"}<Money value={Math.abs(r.amount)} />
                       </span>
                       <div className="row-menu" onClick={(e) => e.stopPropagation()}>
-                        <button type="button" className="btn btn-ghost" onClick={() => setMenuFor(menuFor === r.id ? null : r.id)}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          onClick={(e) => {
+                            if (menuFor === r.id) {
+                              setMenuFor(null);
+                              return;
+                            }
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setMenuOpenUp(window.innerHeight - rect.bottom < 180);
+                            setMenuFor(r.id);
+                          }}
+                        >
                           <MoreVertical size={18} />
                         </button>
                         {menuFor === r.id && (
-                          <div className="row-menu-popup">
+                          <div className={`row-menu-popup ${menuOpenUp ? "open-up" : ""}`}>
                             <button type="button" onClick={() => { edit(r); setMenuFor(null); }} disabled={deletingId === r.id}><Pencil size={15} />Editar</button>
                             <button type="button" className="expense" onClick={() => remove(r.id)} disabled={deletingId === r.id}>
                               {deletingId === r.id ? <LoaderCircle size={15} className="spin" /> : <Trash2 size={15} />}

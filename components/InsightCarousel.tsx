@@ -1,8 +1,9 @@
 "use client";
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
-export type Insight = { icon: string; title: ReactNode; text: ReactNode };
+export type Insight = { icon: string; title: ReactNode; text: ReactNode; href?: string };
 
 export default function InsightCarousel({ insights }: { insights: Insight[] }) {
   const [index, setIndex] = useState(0);
@@ -32,13 +33,20 @@ export default function InsightCarousel({ insights }: { insights: Insight[] }) {
     <article className="insight-card">
       <span className="eyebrow">Dato destacado</span>
       <div className="insight-scroll" ref={trackRef} onScroll={handleScroll}>
-        {insights.map((insight, i) => (
-          <div className="insight-slide" key={i}>
-            <div className="insight-icon">{insight.icon}</div>
-            <h2>{insight.title}</h2>
-            <p>{insight.text}</p>
-          </div>
-        ))}
+        {insights.map((insight, i) => {
+          const content = (
+            <>
+              <div className="insight-icon">{insight.icon}</div>
+              <h2>{insight.title}</h2>
+              <p>{insight.text}</p>
+            </>
+          );
+          return insight.href ? (
+            <Link href={insight.href} className="insight-slide" key={i}>{content}</Link>
+          ) : (
+            <div className="insight-slide" key={i}>{content}</div>
+          );
+        })}
       </div>
       {insights.length > 1 && (
         <div className="insight-dots">
