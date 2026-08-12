@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
 	const [mode, setMode] = useState<"login" | "signup">("login");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
+	const [showPassword, setShowPassword] = useState(false);
 	const [name, setName] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
@@ -50,7 +52,25 @@ export default function LoginPage() {
 
 				<div className="field" style={{ marginTop: 14 }}>
 					<label>Contraseña</label>
-					<input className="input" type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} required />
+					<div style={{ position: "relative" }}>
+						<input
+							className="input"
+							type={showPassword ? "text" : "password"}
+							minLength={6}
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
+							required
+							style={{ paddingRight: 40 }}
+						/>
+						<button
+							type="button"
+							onClick={() => setShowPassword((v) => !v)}
+							aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+							style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "transparent", border: 0, padding: 6, display: "flex", cursor: "pointer", color: "var(--muted)" }}
+						>
+							{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+						</button>
+					</div>
 				</div>
 
 				{error && <p className="expense">{error}</p>}
