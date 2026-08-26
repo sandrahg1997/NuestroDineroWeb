@@ -31,6 +31,30 @@ export function formatDateEs(value: string) {
   return new Date(`${value}T12:00:00`).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+export function monthLabel(key: string) {
+  const label = new Date(`${key}-01T12:00:00`).toLocaleDateString("es-ES", { month: "short", year: "numeric" });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+export function nextMonthKey(key: string) {
+  let [y, m] = key.split("-").map(Number);
+  m++;
+  if (m > 12) { m = 1; y++; }
+  return `${y}-${String(m).padStart(2, "0")}`;
+}
+
+export function monthRange(startKey: string, endKey: string) {
+  const months: string[] = [];
+  let [y, m] = startKey.split("-").map(Number);
+  const [ey, em] = endKey.split("-").map(Number);
+  while (y < ey || (y === ey && m <= em)) {
+    months.push(`${y}-${String(m).padStart(2, "0")}`);
+    m++;
+    if (m > 12) { m = 1; y++; }
+  }
+  return months;
+}
+
 export function defaultPeriodName(start: string, end: string) {
   const startDate = new Date(`${start}T12:00:00`);
   const endDate = new Date(`${end}T12:00:00`);

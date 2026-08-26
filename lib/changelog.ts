@@ -8,6 +8,13 @@ export type ChangelogEntry = {
 // `version` debe ser único y ordenable (usamos fecha YYYY-MM-DD); `date` es el texto que se muestra.
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-08-26",
+    date: "26 de agosto de 2026",
+    items: [
+      "Nuevo: página Histórico con la evolución mensual de tus gastos e ingresos de siempre, con filtro por categoría, totales acumulados y una previsión de los próximos 3 meses basada en tu media reciente.",
+    ],
+  },
+  {
     version: "2026-08-11",
     date: "11 de agosto de 2026",
     items: [

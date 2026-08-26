@@ -5,7 +5,7 @@ import type { HouseholdOption } from "@/lib/data";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useState } from "react";
-import { LayoutDashboard, ReceiptText, Tags, Repeat2, PiggyBank, ScanLine, CalendarRange, Settings, Plus, MoreHorizontal, Users, Eye, EyeOff } from "lucide-react";
+import { LayoutDashboard, ReceiptText, Tags, Repeat2, PiggyBank, ScanLine, CalendarRange, History, Settings, Plus, MoreHorizontal, Users, Eye, EyeOff } from "lucide-react";
 import WhatsNewModal from "./WhatsNewModal";
 
 const items = [
@@ -16,6 +16,7 @@ const items = [
   ["/recurring", Repeat2, "Recurrentes"],
   ["/budgets", PiggyBank, "Presupuestos"],
   ["/periods", CalendarRange, "Periodos"],
+  ["/historico", History, "Histórico"],
   ["/settings", Settings, "Ajustes"]
 ] as const;
 
