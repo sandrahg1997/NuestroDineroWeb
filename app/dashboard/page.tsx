@@ -1,9 +1,9 @@
 import AppShell from "@/components/AppShell";
 import DashboardChartsLoader from "@/components/DashboardChartsLoader";
+import DashboardRange from "@/components/DashboardRange";
 import InsightCarousel, { type Insight } from "@/components/InsightCarousel";
 import Money from "@/components/Money";
 import PageHeader from "@/components/PageHeader";
-import SubmitButton from "@/components/SubmitButton";
 import { getSessionContext } from "@/lib/data";
 import { computePeriodSummary } from "@/lib/period-summary";
 import { categoryColor, dateKey, defaultPeriodName, monthKey, relativeDayLabel, savingsTier } from "@/lib/utils";
@@ -168,17 +168,7 @@ export default async function Dashboard() {
         <div className="hero-copy">
           <div className="hero-kicker"><Sparkles size={15} /> Tu periodo, de un vistazo</div>
           <div className="dashboard-range-inline">
-            <form action={saveDashboardRange} className="dashboard-range-form">
-              <label>
-                Desde
-                <input name="from" type="date" defaultValue={selectedStart} />
-              </label>
-              <label>
-                Hasta
-                <input name="to" type="date" defaultValue={selectedEnd} />
-              </label>
-              <SubmitButton className="btn btn-soft" pendingText="Aplicando…">Aplicar</SubmitButton>
-            </form>
+            <DashboardRange action={saveDashboardRange} from={selectedStart} to={selectedEnd} />
           </div>
           <p className="hero-label">Balance disponible</p>
           <h1 className={balance >= 0 ? "hero-balance positive" : "hero-balance negative"}><Money value={balance} strong /></h1>
@@ -300,7 +290,14 @@ export default async function Dashboard() {
             </div>
           );
         })}
-        {!rows.length && <div className="empty">Añade el primer movimiento para despertar el panel ✨</div>}
+        {!rows.length && (
+          <div className="empty">
+            <span className="empty-icon"><ReceiptText size={22} /></span>
+            <strong>Tu panel está en blanco</strong>
+            <p>Añade el primer gasto o ingreso y empezaremos a mostrarte gráficos y patrones.</p>
+            <Link href="/transactions?new=expense" className="btn btn-primary"><Plus size={16} /> Añadir movimiento</Link>
+          </div>
+        )}
       </div>
     </AppShell>
   );

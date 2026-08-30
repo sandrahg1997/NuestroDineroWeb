@@ -7,6 +7,7 @@ import { dateKey } from "@/lib/utils";
 import { Inbox, LoaderCircle, MoreVertical, Pencil, Plus, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "./Toast";
+import MoneyInput from "./MoneyInput";
 
 type Form = {
   id?: string;
@@ -300,9 +301,20 @@ export default function TransactionManager({ householdId, userId, initial, initi
           </table>
         ) : (
           <div className="empty">
-            <Inbox size={32} />
-            <strong>No hay movimientos</strong>
-            <span>Prueba a cambiar los filtros de búsqueda.</span>
+            <span className="empty-icon"><Inbox size={22} /></span>
+            {isFiltering ? (
+              <>
+                <strong>Sin resultados</strong>
+                <p>Ningún movimiento coincide con los filtros aplicados.</p>
+                <button type="button" className="btn btn-soft" onClick={clearFilters}>Limpiar filtros</button>
+              </>
+            ) : (
+              <>
+                <strong>Aún no hay movimientos</strong>
+                <p>Añade tu primer gasto o ingreso para empezar a ver tus finanzas.</p>
+                <button type="button" className="btn btn-primary" onClick={() => setForm(blank())}><Plus size={16} />Añadir movimiento</button>
+              </>
+            )}
           </div>
         )}
 
@@ -381,7 +393,7 @@ export default function TransactionManager({ householdId, userId, initial, initi
               </div>
               <div className="field">
                 <label>Importe</label>
-                <input className="input" inputMode="decimal" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required />
+                <MoneyInput value={form.amount} onChange={(v) => setForm({ ...form, amount: v })} required />
               </div>
               <div className="field">
                 <label>Fecha</label>

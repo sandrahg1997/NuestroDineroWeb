@@ -99,43 +99,84 @@
 .mobile-more:hover{background:transparent;transform:none}
 .mobile-more.active{background:#f1e8f8;color:var(--primary)}
 
-/* Dark mode */
+/* Tema: automático (sistema), o forzado con data-theme en <html> */
+:root{color-scheme:light}
+:root[data-theme="dark"]{color-scheme:dark}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark}}
+
 @media(prefers-color-scheme:dark){
-	:root{--bg:#14111c;--card:#1e1929;--text:#f1edf7;--muted:#a89cb6;--line:#332c44;--primary:#c184f0;--primary2:#f472b6;--expense:#f3798f;--income:#4fdba0;--shadow:0 12px 35px rgba(0,0,0,.45)}
-	body{background:linear-gradient(150deg,#14111c 0,#181420 42%,#1c1420 100%)}
-	.sidebar{background:rgba(20,16,28,.78)}
-	.nav a:hover,.nav a.active{background:#2a2138}
-	.privacy-toggle:hover,.privacy-toggle.active{background:#2a2138}
-	.input,.select,.textarea{background:#241e30}
-	.chip{background:#1e1929}
-	.filter-summary{background:#241e30}
-	.chip.active{background:#3a2a4d;border-color:#5b3f75}
-	.pill{background:#2a2438}
-	.modal,.login-card{background:#1e1929}
-	.mobile-nav,.mobile-more-popup{background:rgba(24,19,32,.94)}
-	.mobile-more-popup a.active{background:#2a2138}
-	.mobile-more.active{background:#2a2138;color:var(--primary)}
-	.scan-drop{background:#1c1726;border-color:#3a3048}
-	.ocr-preview{background:#1a1624}
-	.card,.dashboard-metric-card,.budget-card,.insight-card,.chart-card,.recent-card{background:rgba(30,25,41,.92)}
-	.btn-soft{background:#2a2044;color:var(--primary)}
-	.btn-danger{background:#3a1c28;color:#f3798f}
-	.insight-card{background:linear-gradient(150deg,#221c30 0,#241a2e 100%)}
-	.insight-card:after{background:#3a2a52}
-	.budget-track{background:#2a2438}
-	.recent-icon.expense,.metric-icon-expense{background:#3a1c28;color:#f3798f}
-	.recent-icon.income,.metric-icon-income{background:#123626;color:#4fdba0}
-	.metric-icon-saving{background:#2a2044;color:#c184f0}
-	.metric-badge.good{background:#123626;color:#4fdba0}
-	.metric-badge.warn{background:#3a1c28;color:#f3798f}
-	.metric-badge.neutral{background:#2a2438;color:var(--muted)}
-	.row-menu-popup button:hover{background:#2a2138}
-	.mobile-row:active{background:#221d2e}
-	.empty svg{color:var(--line)}
-	.household-switcher{background:linear-gradient(135deg,#2a2138,#33223a);border-color:#3d2c48}
-	.household-switcher:after{border-color:var(--muted)}
-	.whatsnew-date{background:#2a2044;color:#c184f0}
+	:root:not([data-theme="light"]){--bg:#14111c;--card:#1e1929;--text:#f1edf7;--muted:#a89cb6;--line:#332c44;--primary:#c184f0;--primary2:#f472b6;--expense:#f3798f;--income:#4fdba0;--shadow:0 12px 35px rgba(0,0,0,.45)}
+	:root:not([data-theme="light"]) body{background:linear-gradient(150deg,#14111c 0,#181420 42%,#1c1420 100%)}
+	:root:not([data-theme="light"]) .sidebar{background:rgba(20,16,28,.78)}
+	:root:not([data-theme="light"]) .nav a:hover,:root:not([data-theme="light"]) .nav a.active{background:#2a2138}
+	:root:not([data-theme="light"]) .privacy-toggle:hover,:root:not([data-theme="light"]) .privacy-toggle.active{background:#2a2138}
+	:root:not([data-theme="light"]) .input,:root:not([data-theme="light"]) .select,:root:not([data-theme="light"]) .textarea{background:#241e30}
+	:root:not([data-theme="light"]) .chip{background:#1e1929}
+	:root:not([data-theme="light"]) .filter-summary{background:#241e30}
+	:root:not([data-theme="light"]) .chip.active{background:#3a2a4d;border-color:#5b3f75}
+	:root:not([data-theme="light"]) .pill{background:#2a2438}
+	:root:not([data-theme="light"]) .modal,:root:not([data-theme="light"]) .login-card{background:#1e1929}
+	:root:not([data-theme="light"]) .mobile-nav,:root:not([data-theme="light"]) .mobile-more-popup{background:rgba(24,19,32,.94)}
+	:root:not([data-theme="light"]) .mobile-more-popup a.active{background:#2a2138}
+	:root:not([data-theme="light"]) .mobile-more.active{background:#2a2138;color:var(--primary)}
+	:root:not([data-theme="light"]) .scan-drop{background:#1c1726;border-color:#3a3048}
+	:root:not([data-theme="light"]) .ocr-preview{background:#1a1624}
+	:root:not([data-theme="light"]) .card,:root:not([data-theme="light"]) .dashboard-metric-card,:root:not([data-theme="light"]) .budget-card,:root:not([data-theme="light"]) .insight-card,:root:not([data-theme="light"]) .chart-card,:root:not([data-theme="light"]) .recent-card{background:rgba(30,25,41,.92)}
+	:root:not([data-theme="light"]) .btn-soft{background:#2a2044;color:var(--primary)}
+	:root:not([data-theme="light"]) .btn-danger{background:#3a1c28;color:#f3798f}
+	:root:not([data-theme="light"]) .insight-card{background:linear-gradient(150deg,#221c30 0,#241a2e 100%)}
+	:root:not([data-theme="light"]) .insight-card:after{background:#3a2a52}
+	:root:not([data-theme="light"]) .budget-track{background:#2a2438}
+	:root:not([data-theme="light"]) .recent-icon.expense,:root:not([data-theme="light"]) .metric-icon-expense{background:#3a1c28;color:#f3798f}
+	:root:not([data-theme="light"]) .recent-icon.income,:root:not([data-theme="light"]) .metric-icon-income{background:#123626;color:#4fdba0}
+	:root:not([data-theme="light"]) .metric-icon-saving{background:#2a2044;color:#c184f0}
+	:root:not([data-theme="light"]) .metric-badge.good{background:#123626;color:#4fdba0}
+	:root:not([data-theme="light"]) .metric-badge.warn{background:#3a1c28;color:#f3798f}
+	:root:not([data-theme="light"]) .metric-badge.neutral{background:#2a2438;color:var(--muted)}
+	:root:not([data-theme="light"]) .row-menu-popup button:hover{background:#2a2138}
+	:root:not([data-theme="light"]) .mobile-row:active{background:#221d2e}
+	:root:not([data-theme="light"]) .empty svg{color:var(--line)}
+	:root:not([data-theme="light"]) .household-switcher{background:linear-gradient(135deg,#2a2138,#33223a);border-color:#3d2c48}
+	:root:not([data-theme="light"]) .household-switcher:after{border-color:var(--muted)}
+	:root:not([data-theme="light"]) .whatsnew-date{background:#2a2044;color:#c184f0}
+	:root:not([data-theme="light"]) .insight-dots button{background:#3a2f4a}
 }
+
+:root[data-theme="dark"]{--bg:#14111c;--card:#1e1929;--text:#f1edf7;--muted:#a89cb6;--line:#332c44;--primary:#c184f0;--primary2:#f472b6;--expense:#f3798f;--income:#4fdba0;--shadow:0 12px 35px rgba(0,0,0,.45)}
+:root[data-theme="dark"] body{background:linear-gradient(150deg,#14111c 0,#181420 42%,#1c1420 100%)}
+:root[data-theme="dark"] .sidebar{background:rgba(20,16,28,.78)}
+:root[data-theme="dark"] .nav a:hover,:root[data-theme="dark"] .nav a.active{background:#2a2138}
+:root[data-theme="dark"] .privacy-toggle:hover,:root[data-theme="dark"] .privacy-toggle.active{background:#2a2138}
+:root[data-theme="dark"] .input,:root[data-theme="dark"] .select,:root[data-theme="dark"] .textarea{background:#241e30}
+:root[data-theme="dark"] .chip{background:#1e1929}
+:root[data-theme="dark"] .filter-summary{background:#241e30}
+:root[data-theme="dark"] .chip.active{background:#3a2a4d;border-color:#5b3f75}
+:root[data-theme="dark"] .pill{background:#2a2438}
+:root[data-theme="dark"] .modal,:root[data-theme="dark"] .login-card{background:#1e1929}
+:root[data-theme="dark"] .mobile-nav,:root[data-theme="dark"] .mobile-more-popup{background:rgba(24,19,32,.94)}
+:root[data-theme="dark"] .mobile-more-popup a.active{background:#2a2138}
+:root[data-theme="dark"] .mobile-more.active{background:#2a2138;color:var(--primary)}
+:root[data-theme="dark"] .scan-drop{background:#1c1726;border-color:#3a3048}
+:root[data-theme="dark"] .ocr-preview{background:#1a1624}
+:root[data-theme="dark"] .card,:root[data-theme="dark"] .dashboard-metric-card,:root[data-theme="dark"] .budget-card,:root[data-theme="dark"] .insight-card,:root[data-theme="dark"] .chart-card,:root[data-theme="dark"] .recent-card{background:rgba(30,25,41,.92)}
+:root[data-theme="dark"] .btn-soft{background:#2a2044;color:var(--primary)}
+:root[data-theme="dark"] .btn-danger{background:#3a1c28;color:#f3798f}
+:root[data-theme="dark"] .insight-card{background:linear-gradient(150deg,#221c30 0,#241a2e 100%)}
+:root[data-theme="dark"] .insight-card:after{background:#3a2a52}
+:root[data-theme="dark"] .budget-track{background:#2a2438}
+:root[data-theme="dark"] .recent-icon.expense,:root[data-theme="dark"] .metric-icon-expense{background:#3a1c28;color:#f3798f}
+:root[data-theme="dark"] .recent-icon.income,:root[data-theme="dark"] .metric-icon-income{background:#123626;color:#4fdba0}
+:root[data-theme="dark"] .metric-icon-saving{background:#2a2044;color:#c184f0}
+:root[data-theme="dark"] .metric-badge.good{background:#123626;color:#4fdba0}
+:root[data-theme="dark"] .metric-badge.warn{background:#3a1c28;color:#f3798f}
+:root[data-theme="dark"] .metric-badge.neutral{background:#2a2438;color:var(--muted)}
+:root[data-theme="dark"] .row-menu-popup button:hover{background:#2a2138}
+:root[data-theme="dark"] .mobile-row:active{background:#221d2e}
+:root[data-theme="dark"] .empty svg{color:var(--line)}
+:root[data-theme="dark"] .household-switcher{background:linear-gradient(135deg,#2a2138,#33223a);border-color:#3d2c48}
+:root[data-theme="dark"] .household-switcher:after{border-color:var(--muted)}
+:root[data-theme="dark"] .whatsnew-date{background:#2a2044;color:#c184f0}
+:root[data-theme="dark"] .insight-dots button{background:#3a2f4a}
 
 /* Presupuesto: alerta visual al acercarse o superar el límite */
 .budget-track span.warn{background:linear-gradient(90deg,#f59e0b,#f97316);box-shadow:0 0 20px rgba(249,115,22,.35)}
@@ -145,17 +186,20 @@
 .insight-dots{position:relative;z-index:1;display:flex;gap:6px;margin-top:16px}
 .insight-dots button{width:7px;height:7px;padding:0;border:0;border-radius:999px;background:#e4d9ee;cursor:pointer;transition:width .2s ease,background .2s ease}
 .insight-dots button.active{width:18px;background:var(--primary)}
-@media(prefers-color-scheme:dark){.insight-dots button{background:#3a2f4a}}
 
 /* Toasts y diálogo de confirmación */
 .toast-stack{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:10px;z-index:300;max-width:min(360px,calc(100vw - 32px))}
-.toast-item{background:#27212e;color:#fff;border-radius:13px;padding:12px 16px;font-size:14px;font-weight:600;line-height:1.4;box-shadow:0 14px 34px rgba(20,10,30,.3);animation:toast-in .18s ease}
+.toast-item{display:flex;align-items:flex-start;gap:10px;background:#27212e;color:#fff;border-radius:13px;padding:12px 14px;font-size:14px;font-weight:600;line-height:1.4;box-shadow:0 14px 34px rgba(20,10,30,.3);animation:toast-in .18s ease}
 .toast-item.error{background:#c3375a}
 .toast-item.success{background:var(--income)}
+.toast-close{flex:none;margin-top:1px;padding:0;border:0;background:transparent;color:inherit;opacity:.7;cursor:pointer;display:inline-flex}
+.toast-close:hover{opacity:1}
 @keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .confirm-modal{width:min(420px,100%)}
 .confirm-message{margin:0;line-height:1.5;white-space:pre-line;color:var(--text)}
-@media(prefers-color-scheme:dark){.toast-item{background:#2a2438}}
+:root[data-theme="dark"] .toast-item{background:#2a2438}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toast-item{background:#2a2438}}
+@media(max-width:900px){.toast-stack{top:calc(12px + env(safe-area-inset-top));bottom:auto;left:12px;right:12px;max-width:none}}
 
 /* Novedades (What's new) */
 .whatsnew-modal{width:min(480px,100%)}
@@ -165,3 +209,20 @@
 .whatsnew-entry{display:grid;gap:8px}
 .whatsnew-date{align-self:start;display:inline-flex;padding:4px 10px;border-radius:999px;background:#f1e8f8;color:var(--primary);font-size:12px;font-weight:750;width:fit-content}
 .whatsnew-entry ul{margin:0;padding-left:20px;display:grid;gap:8px;line-height:1.45}
+
+/* Estados vacíos accionables */
+.empty{display:flex;flex-direction:column;align-items:center;gap:12px;padding:40px 24px}
+.empty-icon{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--card);border:1px solid var(--line);color:var(--muted)}
+.empty p{margin:0;max-width:360px;line-height:1.5}
+.empty .btn{margin-top:4px}
+
+/* Chips de rango rápido en el Inicio */
+.range-presets{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.range-preset{border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.1);color:#fff;border-radius:999px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer}
+.range-preset:hover{background:rgba(255,255,255,.2)}
+.range-preset.active{background:#fff;color:#3a1a52;border-color:#fff}
+
+/* Campo de importe con símbolo € */
+.money-input{position:relative;display:block}
+.money-input>span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:700;pointer-events:none}
+.money-input>input{padding-left:26px}

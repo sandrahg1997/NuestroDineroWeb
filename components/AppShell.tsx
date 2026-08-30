@@ -3,11 +3,12 @@
 import { createClient } from "@/lib/supabase/client";
 import type { HouseholdOption } from "@/lib/data";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { LayoutDashboard, ReceiptText, Tags, Repeat2, PiggyBank, ScanLine, CalendarRange, History, Settings, Plus, MoreHorizontal, Users, Eye, EyeOff } from "lucide-react";
 import WhatsNewModal from "./WhatsNewModal";
 import { useToast } from "./Toast";
+import ThemeToggle from "./ThemeToggle";
 
 const items = [
   ["/dashboard", LayoutDashboard, "Inicio"],
@@ -28,6 +29,7 @@ function householdLabel(h: HouseholdOption) {
 
 export default function AppShell({ children, households = [], hideAmounts = false }: { children: ReactNode; households?: HouseholdOption[]; hideAmounts?: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { toast } = useToast();
   const [more, setMore] = useState(false);
   const [switching, setSwitching] = useState(false);
@@ -49,7 +51,8 @@ export default function AppShell({ children, households = [], hideAmounts = fals
       setSwitching(false);
       return;
     }
-    window.location.reload();
+    router.refresh();
+    setSwitching(false);
   }
 
   async function toggleHideAmounts() {
@@ -92,6 +95,7 @@ export default function AppShell({ children, households = [], hideAmounts = fals
         </nav>
 
         {privacyButton}
+        <ThemeToggle />
       </aside>
 
       <main className="main">
@@ -142,6 +146,7 @@ export default function AppShell({ children, households = [], hideAmounts = fals
           <div className="mobile-more-backdrop" onClick={() => setMore(false)} />
           <div id="mobile-more-menu" className="mobile-more-popup" role="menu">
             {privacyButton}
+            <ThemeToggle />
             {secondary.map(([href, Icon, label]) => (
               <Link href={href} key={href} onClick={() => setMore(false)} className={pathname.startsWith(href) ? "active" : ""}>
                 <Icon size={18} />

@@ -195,7 +195,13 @@ export default function PeriodManager({ householdId, initial, activePeriodId }: 
             </div>
           );
         })}
-        {!rows.length && <div className="card empty">Todavía no has creado ningún periodo.</div>}
+        {!rows.length && (
+          <div className="card empty">
+            <span className="empty-icon"><CalendarRange size={22} /></span>
+            <strong>Sin periodos todavía</strong>
+            <p>Crea tu primer periodo con el formulario de arriba: un mes natural, de nómina a nómina, o lo que necesites.</p>
+          </div>
+        )}
       </div>
     </>
   );

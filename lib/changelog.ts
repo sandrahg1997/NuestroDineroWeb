@@ -13,8 +13,11 @@ export const changelog: ChangelogEntry[] = [
     items: [
       "Corregido: los movimientos recurrentes (hipoteca, nómina, suscripciones…) ahora se generan solos cuando llega su fecha, tanto al abrir la app como mediante una tarea diaria automática. Antes había que crearlos a mano.",
       "Mejora: la exportación e importación de movimientos en Ajustes ahora usa Excel (.xlsx) en lugar de CSV, así se abre directamente en Excel, Numbers o Google Sheets sin problemas de acentos ni separadores. El tipo se muestra como Gasto/Ingreso, las fechas como fecha real, y al importar se te pide confirmación indicando cuántos movimientos se añadirán.",
-      "Mejora: los avisos y confirmaciones de la app ahora aparecen integrados en la interfaz en vez de como ventanas del navegador.",
+      "Mejora: los avisos y confirmaciones de la app (incluidos los borrados con \"escribe ELIMINAR\") ahora aparecen integrados en la interfaz en vez de como ventanas del navegador. Los errores no desaparecen solos y se pueden cerrar.",
       "Mejora: pantalla propia de \"Sin conexión\" al abrir la app instalada sin internet, y varios ajustes de seguridad.",
+      "Nuevo: selector de tema claro / oscuro / automático en el menú lateral.",
+      "Nuevo: atajos de rango en el Inicio (\"Este mes\", \"Mes pasado\", \"Últimos 30 días\").",
+      "Mejora: los campos de importe muestran el símbolo € y se ajustan a dos decimales al salir del campo; las pantallas sin datos ahora explican qué hacer y llevan un botón directo.",
     ],
   },
   {
