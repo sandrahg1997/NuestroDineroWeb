@@ -1,4 +1,4 @@
-# Nuestro Dinero Web
+# OurMoney
 
 Aplicación web responsive para gastos e ingresos compartidos. Está hecha con **Next.js + TypeScript + Supabase** y preparada para desplegarse en **Vercel**.
 
@@ -15,7 +15,7 @@ Aplicación web responsive para gastos e ingresos compartidos. Está hecha con *
 - Escáner de tickets desde la cámara del móvil usando OCR en el navegador.
 - Detección de comercio, importe, fecha y categoría sugerida.
 - Aprendizaje de la categoría elegida para cada comercio.
-- Exportación CSV.
+- Exportación e importación de movimientos en Excel (.xlsx).
 - PWA instalable en iPhone/Android con accesos rápidos a “Añadir gasto” y “Escanear ticket”.
 
 ## 1. Crear Supabase

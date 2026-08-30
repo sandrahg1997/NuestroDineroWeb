@@ -6,6 +6,11 @@ import { TriangleAlert } from "lucide-react";
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
 	useEffect(() => {
 		console.error(error);
+		fetch("/api/log", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ scope: "error.tsx", message: error.message, stack: error.stack, digest: error.digest, url: location.href }),
+		}).catch(() => {});
 	}, [error]);
 
 	return (

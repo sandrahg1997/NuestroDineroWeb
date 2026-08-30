@@ -34,6 +34,14 @@ export async function getSessionContext() {
 
   let activePeriod: Period | null = null;
   if (householdId) {
+    // Materializa los recurrentes vencidos al abrir la app, para que se vean sin
+    // esperar al cron diario. Es idempotente y barato cuando no hay nada pendiente.
+    try {
+      await supabase.rpc("process_due_recurring", { p_household_id: householdId });
+    } catch {
+      // no bloquear el render si el RPC falla
+    }
+
     const { data: householdRow } = await supabase
       .from("households")
       .select("active_period:periods!households_active_period_id_fkey(id,household_id,name,start_date,end_date,created_at)")

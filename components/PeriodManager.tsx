@@ -7,6 +7,7 @@ import { defaultPeriodName, formatDateEs } from "@/lib/utils";
 import { CalendarRange, LoaderCircle, Pencil, Plus, Star, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useToast } from "./Toast";
 
 type PeriodRow = Period & { expense: number; income: number };
 type EditDraft = { name: string; start: string; end: string };
@@ -21,6 +22,7 @@ async function fetchSummary(householdId: string, start: string, end: string) {
 }
 
 export default function PeriodManager({ householdId, initial, activePeriodId }: { householdId: string; initial: PeriodRow[]; activePeriodId: string | null }) {
+  const { toast, confirm } = useToast();
   const [rows, setRows] = useState(initial);
   const [activeId, setActiveId] = useState(activePeriodId);
   const [name, setName] = useState("");
@@ -41,7 +43,7 @@ export default function PeriodManager({ householdId, initial, activePeriodId }: 
     const label = name.trim() || defaultPeriodName(start, end);
     const { data, error } = await s.from("periods").insert({ household_id: householdId, name: label, start_date: start, end_date: end }).select().single();
     if (error) {
-      alert(error.message);
+      toast(error.message, "error");
       setCreating(false);
       return;
     }
@@ -63,7 +65,7 @@ export default function PeriodManager({ householdId, initial, activePeriodId }: 
     const s = createClient();
     const { data, error } = await s.from("periods").update({ name: draft.name.trim() || defaultPeriodName(draft.start, draft.end), start_date: draft.start, end_date: draft.end }).eq("id", id).select().single();
     if (error) {
-      alert(error.message);
+      toast(error.message, "error");
       setSavingEdit(false);
       return;
     }
@@ -77,18 +79,18 @@ export default function PeriodManager({ householdId, initial, activePeriodId }: 
     setSettingActiveId(id);
     const s = createClient();
     const { error } = await s.from("households").update({ active_period_id: id }).eq("id", householdId);
-    if (error) alert(error.message);
+    if (error) toast(error.message, "error");
     else setActiveId(id);
     setSettingActiveId(null);
   }
 
   async function removePeriod(id: string) {
-    if (!confirm("¿Eliminar este periodo? Los movimientos que caían dentro no se borran, solo dejan de verse agrupados en él.")) return;
+    if (!(await confirm("¿Eliminar este periodo? Los movimientos que caían dentro no se borran, solo dejan de verse agrupados en él.", { confirmLabel: "Eliminar", danger: true }))) return;
     setDeletingId(id);
     const s = createClient();
     const { error } = await s.from("periods").delete().eq("id", id);
     if (error) {
-      alert(error.message);
+      toast(error.message, "error");
       setDeletingId(null);
       return;
     }

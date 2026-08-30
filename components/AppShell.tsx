@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { LayoutDashboard, ReceiptText, Tags, Repeat2, PiggyBank, ScanLine, CalendarRange, History, Settings, Plus, MoreHorizontal, Users, Eye, EyeOff } from "lucide-react";
 import WhatsNewModal from "./WhatsNewModal";
+import { useToast } from "./Toast";
 
 const items = [
   ["/dashboard", LayoutDashboard, "Inicio"],
@@ -27,6 +28,7 @@ function householdLabel(h: HouseholdOption) {
 
 export default function AppShell({ children, households = [], hideAmounts = false }: { children: ReactNode; households?: HouseholdOption[]; hideAmounts?: boolean }) {
   const pathname = usePathname();
+  const { toast } = useToast();
   const [more, setMore] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [hidden, setHidden] = useState(hideAmounts);
@@ -43,7 +45,7 @@ export default function AppShell({ children, households = [], hideAmounts = fals
     const s = createClient();
     const { error } = await s.rpc("set_active_household", { p_household_id: householdId });
     if (error) {
-      alert(error.message);
+      toast(error.message, "error");
       setSwitching(false);
       return;
     }
@@ -57,7 +59,7 @@ export default function AppShell({ children, households = [], hideAmounts = fals
     const { error } = await s.rpc("set_hide_amounts", { p_hidden: next });
     if (error) {
       setHidden(!next);
-      alert(error.message);
+      toast(error.message, "error");
     }
   }
 

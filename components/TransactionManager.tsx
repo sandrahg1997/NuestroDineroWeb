@@ -6,6 +6,7 @@ import Money from "@/components/Money";
 import { dateKey } from "@/lib/utils";
 import { Inbox, LoaderCircle, MoreVertical, Pencil, Plus, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { useToast } from "./Toast";
 
 type Form = {
   id?: string;
@@ -46,6 +47,7 @@ export default function TransactionManager({ householdId, userId, initial, initi
   const [menuOpenUp, setMenuOpenUp] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const params = useSearchParams();
+  const { toast, confirm } = useToast();
 
   useEffect(() => {
     const n = params.get("new");
@@ -177,18 +179,18 @@ export default function TransactionManager({ householdId, userId, initial, initi
       setRows(form.id ? rows.map((r) => (r.id === form.id ? data : r)) : [data, ...rows]);
       setForm(null);
     } else {
-      alert(error?.message);
+      toast(error?.message ?? "No se pudo guardar el movimiento.", "error");
     }
     setBusy(false);
   }
 
   async function remove(id: string) {
-    if (!confirm("¿Eliminar este movimiento?")) return;
+    if (!(await confirm("¿Eliminar este movimiento?", { confirmLabel: "Eliminar", danger: true }))) return;
     setDeletingId(id);
     const s = createClient();
     const { error } = await s.from("transactions").delete().eq("id", id);
     if (!error) setRows(rows.filter((r) => r.id !== id));
-    else alert(error.message);
+    else toast(error.message, "error");
     setDeletingId(null);
   }
 

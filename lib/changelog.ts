@@ -8,6 +8,16 @@ export type ChangelogEntry = {
 // `version` debe ser único y ordenable (usamos fecha YYYY-MM-DD); `date` es el texto que se muestra.
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-08-30",
+    date: "30 de agosto de 2026",
+    items: [
+      "Corregido: los movimientos recurrentes (hipoteca, nómina, suscripciones…) ahora se generan solos cuando llega su fecha, tanto al abrir la app como mediante una tarea diaria automática. Antes había que crearlos a mano.",
+      "Mejora: la exportación e importación de movimientos en Ajustes ahora usa Excel (.xlsx) en lugar de CSV, así se abre directamente en Excel, Numbers o Google Sheets sin problemas de acentos ni separadores. El tipo se muestra como Gasto/Ingreso, las fechas como fecha real, y al importar se te pide confirmación indicando cuántos movimientos se añadirán.",
+      "Mejora: los avisos y confirmaciones de la app ahora aparecen integrados en la interfaz en vez de como ventanas del navegador.",
+      "Mejora: pantalla propia de \"Sin conexión\" al abrir la app instalada sin internet, y varios ajustes de seguridad.",
+    ],
+  },
+  {
     version: "2026-08-26",
     date: "26 de agosto de 2026",
     items: [

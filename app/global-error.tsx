@@ -6,6 +6,11 @@ import { useEffect } from "react";
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
 	useEffect(() => {
 		console.error(error);
+		fetch("/api/log", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ scope: "global-error.tsx", message: error.message, stack: error.stack, digest: error.digest, url: location.href }),
+		}).catch(() => {});
 	}, [error]);
 
 	return (
