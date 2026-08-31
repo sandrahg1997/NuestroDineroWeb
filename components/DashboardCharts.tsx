@@ -11,17 +11,34 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { categoryColor } from "@/lib/utils";
 
 export default function DashboardCharts({
   byCategory,
   byDay,
   hideAmounts,
+  from,
+  to,
 }: {
-  byCategory: { name: string; value: number }[];
+  byCategory: { name: string; value: number; categoryId?: string | null }[];
   byDay: { day: string; expense: number; income: number }[];
   hideAmounts?: boolean;
+  from?: string;
+  to?: string;
 }) {
+  const router = useRouter();
+
+  const categoryHref = (categoryId?: string | null) => {
+    const qs = new URLSearchParams();
+    qs.set("type", "expense");
+    if (categoryId) qs.set("category", categoryId);
+    if (from) qs.set("from", from);
+    if (to) qs.set("to", to);
+    return `/transactions?${qs.toString()}`;
+  };
+
   return (
     <section className="dashboard-charts">
       <article className="card chart-card">
@@ -36,7 +53,20 @@ export default function DashboardCharts({
             <div className="category-donut">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={byCategory} dataKey="value" nameKey="name" innerRadius={66} outerRadius={96} paddingAngle={4} stroke="none">
+                  <Pie
+                    data={byCategory}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={66}
+                    outerRadius={96}
+                    paddingAngle={4}
+                    stroke="none"
+                    style={{ cursor: "pointer" }}
+                    onClick={(entry: any) => {
+                      const categoryId = entry?.payload?.categoryId ?? entry?.categoryId ?? null;
+                      router.push(categoryHref(categoryId));
+                    }}
+                  >
                     {byCategory.map((entry) => <Cell key={entry.name} fill={categoryColor(entry.name)} />)}
                   </Pie>
                   {!hideAmounts && <Tooltip formatter={(value: number) => `${value.toFixed(2)} €`} />}
@@ -46,11 +76,11 @@ export default function DashboardCharts({
             </div>
             <div className="category-legend">
               {byCategory.map((item) => (
-                <div className="legend-row" key={item.name}>
+                <Link className="legend-row" key={item.name} href={categoryHref(item.categoryId)}>
                   <span className="legend-dot" style={{ background: categoryColor(item.name) }} />
                   <span>{item.name}</span>
                   <strong className="amount-value">{item.value.toFixed(0)} €</strong>
-                </div>
+                </Link>
               ))}
             </div>
           </div>

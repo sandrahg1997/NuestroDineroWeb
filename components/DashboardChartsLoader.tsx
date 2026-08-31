@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import type { FC } from "react";
 
-type ByCategory = { name: string; value: number }[];
+type ByCategory = { name: string; value: number; categoryId?: string | null }[];
 type ByDay = { day: string; expense: number; income: number }[];
 
-const DashboardChartsLoader: FC<{ byCategory: ByCategory; byDay: ByDay; hideAmounts?: boolean }> = ({ byCategory, byDay, hideAmounts }) => {
+const DashboardChartsLoader: FC<{ byCategory: ByCategory; byDay: ByDay; hideAmounts?: boolean; from?: string; to?: string }> = ({ byCategory, byDay, hideAmounts, from, to }) => {
   const [Comp, setComp] = useState<any>(null);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ const DashboardChartsLoader: FC<{ byCategory: ByCategory; byDay: ByDay; hideAmou
   );
 
   const C = Comp;
-  return <C byCategory={byCategory} byDay={byDay} hideAmounts={hideAmounts} />;
+  return <C byCategory={byCategory} byDay={byDay} hideAmounts={hideAmounts} from={from} to={to} />;
 };
 
 export default DashboardChartsLoader;

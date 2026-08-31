@@ -258,7 +258,7 @@ export default async function Dashboard() {
         <InsightCarousel insights={insights} />
       </section>
 
-      <DashboardChartsLoader byCategory={categoryData} byDay={byDay} hideAmounts={hideAmounts} />
+      <DashboardChartsLoader byCategory={categoryData} byDay={byDay} hideAmounts={hideAmounts} from={selectedStart} to={selectedEnd} />
 
       <div className="section-head recent-head">
         <div>

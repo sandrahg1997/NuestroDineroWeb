@@ -110,7 +110,7 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
         </article>
       </section>
 
-      <DashboardChartsLoader byCategory={categoryData} byDay={byDay} hideAmounts={hideAmounts} />
+      <DashboardChartsLoader byCategory={categoryData} byDay={byDay} hideAmounts={hideAmounts} from={period.start_date} to={period.end_date} />
 
       <div className="section-head recent-head">
         <div>
