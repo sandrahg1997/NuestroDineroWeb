@@ -42,6 +42,7 @@ export default function TransactionManager({ householdId, userId, initial, initi
   const [categories] = useState(initialCategories);
   const [form, setForm] = useState<Form | null>(null);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [type, setType] = useState<"all" | TransactionType>("all");
   const [category, setCategory] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -92,10 +93,16 @@ export default function TransactionManager({ householdId, userId, initial, initi
     return () => window.removeEventListener("keydown", onKey);
   }, [form]);
 
+  // Filtrar por texto no en cada pulsación: espera a que el usuario pare.
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(query), 200);
+    return () => clearTimeout(id);
+  }, [query]);
+
   // Volver a la primera página cuando cambian los filtros u ordenación.
   useEffect(() => {
     setVisible(PAGE_SIZE);
-  }, [query, type, category, dateFrom, dateTo, sort]);
+  }, [debouncedQuery, type, category, dateFrom, dateTo, sort]);
 
   const activeFilterCount = [type !== "all", !!category, !!dateFrom, !!dateTo].filter(Boolean).length;
 
@@ -112,7 +119,7 @@ export default function TransactionManager({ householdId, userId, initial, initi
         const dateValue = typeof r.date === "string" ? r.date : "";
         const text = `${r.concept} ${r.merchant} ${r.note} ${r.category?.name ?? ""}`.toLowerCase();
         return (
-          (!query || text.includes(query.toLowerCase())) &&
+          (!debouncedQuery || text.includes(debouncedQuery.toLowerCase())) &&
           (type === "all" || r.type === type) &&
           (!category || r.category_id === category) &&
           (!dateFrom || dateValue >= dateFrom) &&
@@ -127,12 +134,12 @@ export default function TransactionManager({ householdId, userId, initial, initi
         if (sort === "amount_asc") return a.amount - b.amount;
         return bDate.localeCompare(aDate);
       });
-  }, [rows, query, type, category, dateFrom, dateTo, sort]);
+  }, [rows, debouncedQuery, type, category, dateFrom, dateTo, sort]);
 
   const shown = useMemo(() => filtered.slice(0, visible), [filtered, visible]);
   const hasMore = filtered.length > visible;
 
-  const isFiltering = !!query || activeFilterCount > 0;
+  const isFiltering = !!debouncedQuery || activeFilterCount > 0;
   const filteredExpense = useMemo(() => filtered.filter((r) => r.type === "expense").reduce((total, r) => total + Number(r.amount), 0), [filtered]);
   const filteredIncome = useMemo(() => filtered.filter((r) => r.type === "income").reduce((total, r) => total + Number(r.amount), 0), [filtered]);
 
