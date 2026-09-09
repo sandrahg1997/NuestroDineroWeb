@@ -43,6 +43,13 @@ export function nextMonthKey(key: string) {
   return `${y}-${String(m).padStart(2, "0")}`;
 }
 
+export function prevMonthKey(key: string) {
+  let [y, m] = key.split("-").map(Number);
+  m--;
+  if (m < 1) { m = 12; y--; }
+  return `${y}-${String(m).padStart(2, "0")}`;
+}
+
 export function monthRange(startKey: string, endKey: string) {
   const months: string[] = [];
   let [y, m] = startKey.split("-").map(Number);
@@ -53,6 +60,16 @@ export function monthRange(startKey: string, endKey: string) {
     if (m > 12) { m = 1; y++; }
   }
   return months;
+}
+
+export function transactionsHref(opts: { type?: "expense" | "income"; category?: string | null; from?: string; to?: string } = {}) {
+  const qs = new URLSearchParams();
+  if (opts.type) qs.set("type", opts.type);
+  if (opts.category) qs.set("category", opts.category);
+  if (opts.from) qs.set("from", opts.from);
+  if (opts.to) qs.set("to", opts.to);
+  const query = qs.toString();
+  return query ? `/transactions?${query}` : "/transactions";
 }
 
 export function defaultPeriodName(start: string, end: string) {

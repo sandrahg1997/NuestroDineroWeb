@@ -13,7 +13,8 @@ import {
 } from "recharts";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { categoryColor } from "@/lib/utils";
+import { categoryColor, transactionsHref } from "@/lib/utils";
+import { useChartTheme } from "@/lib/useChartTheme";
 
 export default function DashboardCharts({
   byCategory,
@@ -29,14 +30,15 @@ export default function DashboardCharts({
   to?: string;
 }) {
   const router = useRouter();
+  const chart = useChartTheme();
 
-  const categoryHref = (categoryId?: string | null) => {
-    const qs = new URLSearchParams();
-    qs.set("type", "expense");
-    if (categoryId) qs.set("category", categoryId);
-    if (from) qs.set("from", from);
-    if (to) qs.set("to", to);
-    return `/transactions?${qs.toString()}`;
+  const categoryHref = (categoryId?: string | null) =>
+    transactionsHref({ type: "expense", category: categoryId, from, to });
+
+  const tooltipStyle = {
+    contentStyle: { background: chart.tooltipBg, border: `1px solid ${chart.tooltipBorder}`, borderRadius: 12, color: chart.tooltipText },
+    labelStyle: { color: chart.tooltipText },
+    itemStyle: { color: chart.tooltipText },
   };
 
   return (
@@ -69,7 +71,7 @@ export default function DashboardCharts({
                   >
                     {byCategory.map((entry) => <Cell key={entry.name} fill={categoryColor(entry.name)} />)}
                   </Pie>
-                  {!hideAmounts && <Tooltip formatter={(value: number) => `${value.toFixed(2)} €`} />}
+                  {!hideAmounts && <Tooltip {...tooltipStyle} formatter={(value: number) => `${value.toFixed(2)} €`} />}
                 </PieChart>
               </ResponsiveContainer>
               <div className="donut-label"><strong>{byCategory.length}</strong><span>categorías</span></div>
@@ -108,9 +110,9 @@ export default function DashboardCharts({
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "#8b8494", fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: "#8b8494", fontSize: 12 }} />
-                {!hideAmounts && <Tooltip formatter={(value: number) => `${value.toFixed(2)} €`} />}
+                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: chart.axis, fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: chart.axis, fontSize: 12 }} />
+                {!hideAmounts && <Tooltip {...tooltipStyle} formatter={(value: number) => `${value.toFixed(2)} €`} />}
                 <Area type="monotone" dataKey="expense" name="Gastos" stroke="#ec4899" strokeWidth={3} fill="url(#expenseFill)" />
                 <Area type="monotone" dataKey="income" name="Ingresos" stroke="#10b981" strokeWidth={3} fill="url(#incomeFill)" />
               </AreaChart>

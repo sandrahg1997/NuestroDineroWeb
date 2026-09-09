@@ -1,17 +1,28 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import Money from "@/components/Money";
 import type { Category } from "@/lib/types";
-import { dateKey, monthLabel, monthRange, nextMonthKey } from "@/lib/utils";
-import { ArrowUpRight, CalendarRange, ReceiptText, Sparkles } from "lucide-react";
+import { categoryColor, dateKey, monthLabel, monthRange, nextMonthKey, prevMonthKey, transactionsHref } from "@/lib/utils";
+import { useChartTheme } from "@/lib/useChartTheme";
+import { ArrowDownRight, ArrowUpRight, CalendarRange, Minus, ReceiptText, Sparkles } from "lucide-react";
 
 type Row = { date: string; amount: number; type: "expense" | "income"; category_id: string | null };
 type MonthPoint = { month: string; label: string; expense: number; income: number; forecast: boolean };
+type CmpBasis = "prev" | "avg3" | "year";
+type CmpView = "all" | "cuts" | "ups";
 
 const FORECAST_MONTHS = 3;
 const FORECAST_SAMPLE = 3;
+const NO_CATEGORY = "__none__";
+const TREND_MONTHS = 6;
+
+function lastDayOfMonth(key: string) {
+  const [y, m] = key.split("-").map(Number);
+  return new Date(y, m, 0).getDate();
+}
 
 export default function HistoricoCharts({
   transactions,
@@ -23,6 +34,7 @@ export default function HistoricoCharts({
   hideAmounts?: boolean;
 }) {
   const [categoryId, setCategoryId] = useState("");
+  const chart = useChartTheme();
 
   const filtered = useMemo(
     () => (categoryId ? transactions.filter((t) => t.category_id === categoryId) : transactions),
@@ -71,6 +83,98 @@ export default function HistoricoCharts({
   }, [filtered]);
 
   const firstForecastLabel = monthly.find((m) => m.forecast)?.label;
+
+  // ─── Comparativa de gasto por categoría entre meses ────────────────────────
+  const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+
+  const expenseByMonth = useMemo(() => {
+    // month (YYYY-MM) -> (categoryId -> total gastado)
+    const map = new Map<string, Map<string, number>>();
+    for (const t of transactions) {
+      if (t.type !== "expense") continue;
+      const mk = t.date.slice(0, 7);
+      const cat = t.category_id ?? NO_CATEGORY;
+      let inner = map.get(mk);
+      if (!inner) { inner = new Map(); map.set(mk, inner); }
+      inner.set(cat, (inner.get(cat) ?? 0) + Number(t.amount));
+    }
+    return map;
+  }, [transactions]);
+
+  const availableMonths = useMemo(() => [...expenseByMonth.keys()].sort(), [expenseByMonth]);
+
+  const [cmpMonth, setCmpMonth] = useState("");
+  const [cmpBasis, setCmpBasis] = useState<CmpBasis>("prev");
+  const [cmpView, setCmpView] = useState<CmpView>("all");
+
+  const currentMonthKey = dateKey().slice(0, 7);
+  const refMonth = cmpMonth || availableMonths[availableMonths.length - 1] || currentMonthKey;
+  const monthInProgress = refMonth >= currentMonthKey;
+
+  const comparison = useMemo(() => {
+    const current = expenseByMonth.get(refMonth) ?? new Map<string, number>();
+
+    // Meses que forman la base de comparación.
+    let baseMonths: string[];
+    if (cmpBasis === "prev") baseMonths = [prevMonthKey(refMonth)];
+    else if (cmpBasis === "year") {
+      const [y, m] = refMonth.split("-");
+      baseMonths = [`${Number(y) - 1}-${m}`];
+    } else {
+      let k = refMonth;
+      baseMonths = [];
+      for (let i = 0; i < 3; i++) { k = prevMonthKey(k); baseMonths.push(k); }
+    }
+    const baseMaps = baseMonths.map((k) => expenseByMonth.get(k)).filter(Boolean) as Map<string, number>[];
+    const baseDivisor = cmpBasis === "avg3" ? 3 : 1;
+    const baseFor = (cat: string) => baseMaps.reduce((s, mm) => s + (mm.get(cat) ?? 0), 0) / baseDivisor;
+
+    // Meses para la mini-tendencia (los TREND_MONTHS que terminan en refMonth).
+    const trendMonths: string[] = [];
+    let tk = refMonth;
+    for (let i = 0; i < TREND_MONTHS; i++) { trendMonths.unshift(tk); tk = prevMonthKey(tk); }
+
+    const catIds = new Set<string>(current.keys());
+    for (const mm of baseMaps) for (const c of mm.keys()) catIds.add(c);
+
+    const rows = [...catIds].map((cat) => {
+      const name = cat === NO_CATEGORY ? "Sin categoría" : catMap.get(cat)?.name ?? "Categoría eliminada";
+      const icon = cat === NO_CATEGORY ? "•" : catMap.get(cat)?.icon ?? "•";
+      const now = current.get(cat) ?? 0;
+      const before = baseFor(cat);
+      const delta = now - before;
+      const pct = before > 0 ? (delta / before) * 100 : now > 0 ? 100 : 0;
+      const trend = trendMonths.map((mk) => expenseByMonth.get(mk)?.get(cat) ?? 0);
+      const tag: "new" | "gone" | null =
+        before > 0 && now < 0.005 ? "gone" : before < 0.005 && now > 0 ? "new" : null;
+      return { cat, name, icon, now, before, delta, pct, trend, tag };
+    }).filter((r) => r.now > 0 || r.before > 0);
+
+    rows.sort((a, b) => a.delta - b.delta); // recortes primero (delta más negativo arriba)
+
+    const maxAbsDelta = rows.reduce((mx, r) => Math.max(mx, Math.abs(r.delta)), 0) || 1;
+    const cut = rows.reduce((s, r) => (r.delta < 0 ? s - r.delta : s), 0);
+    const up = rows.reduce((s, r) => (r.delta > 0 ? s + r.delta : s), 0);
+    const nowTotal = rows.reduce((s, r) => s + r.now, 0);
+    const beforeTotal = rows.reduce((s, r) => s + r.before, 0);
+    const cutCount = rows.filter((r) => r.delta < -0.005).length;
+    const upCount = rows.filter((r) => r.delta > 0.005).length;
+
+    const hasBaseData = baseMaps.length > 0;
+    const baseLabel = cmpBasis === "avg3" ? "media de los 3 meses previos" : monthLabel(baseMonths[0]);
+
+    return { rows, maxAbsDelta, cut, up, nowTotal, beforeTotal, cutCount, upCount, hasBaseData, baseLabel };
+  }, [expenseByMonth, refMonth, cmpBasis, catMap]);
+
+  const netDelta = comparison.nowTotal - comparison.beforeTotal;
+  const monthFrom = `${refMonth}-01`;
+  const monthTo = `${refMonth}-${String(lastDayOfMonth(refMonth)).padStart(2, "0")}`;
+  const rowHref = (cat: string) =>
+    transactionsHref({ type: "expense", category: cat === NO_CATEGORY ? null : cat, from: monthFrom, to: monthTo });
+
+  const visibleRows = comparison.rows.filter((r) =>
+    cmpView === "cuts" ? r.delta < -0.005 : cmpView === "ups" ? r.delta > 0.005 : true
+  );
 
   return (
     <>
@@ -125,14 +229,17 @@ export default function HistoricoCharts({
           {monthly.length ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthly} margin={{ top: 10, right: 6, left: -18, bottom: 0 }}>
-                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "#8b8494", fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: "#8b8494", fontSize: 12 }} />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: chart.axis, fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: chart.axis, fontSize: 12 }} />
                 {!hideAmounts && (
                   <Tooltip
+                    contentStyle={{ background: chart.tooltipBg, border: `1px solid ${chart.tooltipBorder}`, borderRadius: 12, color: chart.tooltipText }}
+                    labelStyle={{ color: chart.tooltipText }}
+                    itemStyle={{ color: chart.tooltipText }}
                     formatter={(value: number, name: string, item: any) => [`${value.toFixed(2)} €`, item?.payload?.forecast ? `${name} (previsión)` : name]}
                   />
                 )}
-                {firstForecastLabel && <ReferenceLine x={firstForecastLabel} stroke="#c9c1d4" strokeDasharray="4 4" />}
+                {firstForecastLabel && <ReferenceLine x={firstForecastLabel} stroke={chart.grid} strokeDasharray="4 4" />}
                 <Bar dataKey="expense" name="Gastos" radius={[6, 6, 0, 0]}>
                   {monthly.map((m) => <Cell key={`e-${m.month}`} fill="#ec4899" fillOpacity={m.forecast ? 0.35 : 1} />)}
                 </Bar>
@@ -148,6 +255,133 @@ export default function HistoricoCharts({
           <span><i className="chart-key income-key" /> Ingresos</span>
           {firstForecastLabel && <span>Barras claras desde {firstForecastLabel}: previsión basada en la media de los últimos {Math.min(FORECAST_SAMPLE, monthsTracked)} meses.</span>}
         </div>
+      </article>
+
+      <article className="card chart-card" style={{ marginTop: 18 }}>
+        <div className="section-head dashboard-section-head">
+          <div>
+            <span className="eyebrow">Comparativa</span>
+            <h2>Gasto por categoría vs. otro periodo</h2>
+          </div>
+        </div>
+
+        <div className="toolbar" style={{ marginBottom: 12 }}>
+          <select
+            className="select"
+            style={{ maxWidth: 200 }}
+            value={refMonth}
+            onChange={(e) => setCmpMonth(e.target.value)}
+          >
+            {(availableMonths.length ? availableMonths : [refMonth]).slice().reverse().map((m) => (
+              <option key={m} value={m}>{monthLabel(m)}</option>
+            ))}
+          </select>
+          <span style={{ color: "var(--muted)", fontSize: 13, fontWeight: 650 }}>comparado con</span>
+          <select
+            className="select"
+            style={{ maxWidth: 220 }}
+            value={cmpBasis}
+            onChange={(e) => setCmpBasis(e.target.value as CmpBasis)}
+          >
+            <option value="prev">Mes anterior</option>
+            <option value="avg3">Media de los 3 meses previos</option>
+            <option value="year">Mismo mes del año pasado</option>
+          </select>
+        </div>
+
+        {comparison.hasBaseData && comparison.rows.length > 0 && (
+          <div className="chip-row" style={{ marginBottom: 14 }}>
+            <button className={`chip${cmpView === "all" ? " active" : ""}`} onClick={() => setCmpView("all")}>
+              Todo ({comparison.rows.length})
+            </button>
+            <button className={`chip${cmpView === "cuts" ? " active" : ""}`} onClick={() => setCmpView("cuts")}>
+              Solo recortes ({comparison.cutCount})
+            </button>
+            <button className={`chip${cmpView === "ups" ? " active" : ""}`} onClick={() => setCmpView("ups")}>
+              Solo subidas ({comparison.upCount})
+            </button>
+          </div>
+        )}
+
+        {!comparison.hasBaseData ? (
+          <div className="empty">No hay datos del periodo de comparación ({comparison.baseLabel}).</div>
+        ) : !comparison.rows.length ? (
+          <div className="empty">Sin gastos que comparar en estos meses.</div>
+        ) : (
+          <>
+            {monthInProgress && (
+              <div className="filter-summary" style={{ marginBottom: 12 }}>
+                <span>⚠ {monthLabel(refMonth)} aún está en curso: la comparación es parcial y casi todo aparecerá como recorte.</span>
+              </div>
+            )}
+
+            <div className="filter-summary" style={{ marginBottom: 14 }}>
+              <span>Recortado: <strong className="income amount-value">−{comparison.cut.toFixed(0)} €</strong></span>
+              <span>Aumentado: <strong className="expense amount-value">+{comparison.up.toFixed(0)} €</strong></span>
+              <span>
+                Neto:{" "}
+                <strong className={`amount-value ${netDelta <= 0 ? "income" : "expense"}`}>
+                  {netDelta > 0 ? "+" : netDelta < 0 ? "−" : ""}{Math.abs(netDelta).toFixed(0)} €
+                </strong>
+              </span>
+            </div>
+
+            {visibleRows.length ? (
+              <div className="cmp-list">
+                {visibleRows.map((r) => {
+                  const dir = r.delta < -0.005 ? "down" : r.delta > 0.005 ? "up" : "flat";
+                  const DirIcon = dir === "down" ? ArrowDownRight : dir === "up" ? ArrowUpRight : Minus;
+                  const trendMax = Math.max(...r.trend, 1);
+                  const barPct = Math.round((Math.abs(r.delta) / comparison.maxAbsDelta) * 100);
+                  return (
+                    <Link className="cmp-item" key={r.cat} href={rowHref(r.cat)}>
+                      <div className="cmp-row-main">
+                        <div className="cmp-name">
+                          <span className="legend-dot" style={{ background: categoryColor(r.name) }} />
+                          <span className="cmp-label">{r.icon} {r.name}</span>
+                          {r.tag === "gone" && <span className="cmp-tag gone">ya no gastas</span>}
+                          {r.tag === "new" && <span className="cmp-tag new">nuevo</span>}
+                        </div>
+                        <div className="cmp-spark" aria-hidden>
+                          {r.trend.map((v, i) => (
+                            <i
+                              key={i}
+                              className={i === r.trend.length - 1 ? "cur" : undefined}
+                              style={{ height: `${Math.round((v / trendMax) * 100)}%` }}
+                            />
+                          ))}
+                        </div>
+                        <div className="cmp-values">
+                          <Money value={r.before} /> → <Money value={r.now} />
+                        </div>
+                        <div className={`cmp-delta ${dir}`}>
+                          <DirIcon size={14} />
+                          <span className="amount-value">
+                            {r.delta > 0 ? "+" : r.delta < 0 ? "−" : ""}{Math.abs(r.delta).toFixed(0)} €
+                          </span>
+                          {r.before > 0 && dir !== "flat" && (
+                            <span className="cmp-pct">({r.pct > 0 ? "+" : ""}{r.pct.toFixed(0)}%)</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="cmp-track">
+                        <span className={dir} style={{ width: `${barPct}%` }} />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="empty">
+                {cmpView === "cuts" ? "No hay recortes en este periodo." : "No hay subidas en este periodo."}
+              </div>
+            )}
+
+            <div className="chart-caption" style={{ marginTop: 12 }}>
+              <span>Ordenado por mayor recorte · barra clara = tendencia últimos {TREND_MONTHS} meses · pulsa una fila para ver sus movimientos.</span>
+            </div>
+          </>
+        )}
       </article>
     </>
   );

@@ -6,7 +6,7 @@ import Money from "@/components/Money";
 import PageHeader from "@/components/PageHeader";
 import { getSessionContext } from "@/lib/data";
 import { computePeriodSummary } from "@/lib/period-summary";
-import { categoryColor, dateKey, defaultPeriodName, monthKey, relativeDayLabel, savingsTier } from "@/lib/utils";
+import { categoryColor, dateKey, defaultPeriodName, monthKey, relativeDayLabel, savingsTier, transactionsHref } from "@/lib/utils";
 import { ArrowDownRight, ArrowUpRight, PiggyBank, Plus, ReceiptText, Sparkles, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -92,14 +92,8 @@ export default async function Dashboard() {
   const firstName = user.user_metadata?.display_name?.split(" ")[0] || user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0] || "equipo";
   const savings = savingsTier(savingsRate);
 
-  function transactionsLink(type?: "expense" | "income", categoryId?: string | null) {
-    const qs = new URLSearchParams();
-    if (type) qs.set("type", type);
-    if (categoryId) qs.set("category", categoryId);
-    qs.set("from", selectedStart);
-    qs.set("to", selectedEnd);
-    return `/transactions?${qs.toString()}`;
-  }
+  const transactionsLink = (type?: "expense" | "income", categoryId?: string | null) =>
+    transactionsHref({ type, category: categoryId, from: selectedStart, to: selectedEnd });
 
   const todayKey = dateKey();
   const today = new Date(`${todayKey}T12:00:00`);

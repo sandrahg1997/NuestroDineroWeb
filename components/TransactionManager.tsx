@@ -1,13 +1,16 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Category, Transaction, TransactionType } from "@/lib/types";
 import Money from "@/components/Money";
 import { dateKey } from "@/lib/utils";
+import { merchantSuggestions } from "@/lib/receipt";
 import { Inbox, LoaderCircle, MoreVertical, Pencil, Plus, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "./Toast";
 import MoneyInput from "./MoneyInput";
+
+type MerchantRule = { merchant_pattern: string; category_id: string };
 
 type Form = {
   id?: string;
@@ -21,6 +24,8 @@ type Form = {
   receipt_text: string;
 };
 
+const PAGE_SIZE = 50;
+
 const blank = (type: TransactionType = "expense"): Form => ({
   concept: "",
   amount: "",
@@ -32,7 +37,7 @@ const blank = (type: TransactionType = "expense"): Form => ({
   receipt_text: "",
 });
 
-export default function TransactionManager({ householdId, userId, initial, initialCategories }: { householdId: string; userId: string; initial: Transaction[]; initialCategories: Category[] }) {
+export default function TransactionManager({ householdId, userId, initial, initialCategories, rules = [] }: { householdId: string; userId: string; initial: Transaction[]; initialCategories: Category[]; rules?: MerchantRule[] }) {
   const [rows, setRows] = useState(initial);
   const [categories] = useState(initialCategories);
   const [form, setForm] = useState<Form | null>(null);
@@ -47,8 +52,11 @@ export default function TransactionManager({ householdId, userId, initial, initi
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [menuOpenUp, setMenuOpenUp] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [visible, setVisible] = useState(PAGE_SIZE);
   const params = useSearchParams();
   const { toast, confirm } = useToast();
+  const modalRef = useRef<HTMLFormElement>(null);
+  const conceptRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const n = params.get("new");
@@ -73,6 +81,21 @@ export default function TransactionManager({ householdId, userId, initial, initi
     document.addEventListener("click", close);
     return () => document.removeEventListener("click", close);
   }, [menuFor]);
+
+  // Cerrar el modal con Escape.
+  useEffect(() => {
+    if (!form) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setForm(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [form]);
+
+  // Volver a la primera página cuando cambian los filtros u ordenación.
+  useEffect(() => {
+    setVisible(PAGE_SIZE);
+  }, [query, type, category, dateFrom, dateTo, sort]);
 
   const activeFilterCount = [type !== "all", !!category, !!dateFrom, !!dateTo].filter(Boolean).length;
 
@@ -106,9 +129,22 @@ export default function TransactionManager({ householdId, userId, initial, initi
       });
   }, [rows, query, type, category, dateFrom, dateTo, sort]);
 
+  const shown = useMemo(() => filtered.slice(0, visible), [filtered, visible]);
+  const hasMore = filtered.length > visible;
+
   const isFiltering = !!query || activeFilterCount > 0;
   const filteredExpense = useMemo(() => filtered.filter((r) => r.type === "expense").reduce((total, r) => total + Number(r.amount), 0), [filtered]);
   const filteredIncome = useMemo(() => filtered.filter((r) => r.type === "income").reduce((total, r) => total + Number(r.amount), 0), [filtered]);
+
+  // Categorías más usadas, para acceso rápido al crear un movimiento.
+  const frequentCategories = useMemo(() => {
+    const count = new Map<string, number>();
+    for (const r of rows) if (r.category_id) count.set(r.category_id, (count.get(r.category_id) ?? 0) + 1);
+    return [...count.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([id]) => categories.find((c) => c.id === id))
+      .filter((c): c is Category => Boolean(c));
+  }, [rows, categories]);
 
   const dateLabel = (value: string | null | undefined) => {
     if (!value) return "Sin fecha";
@@ -132,27 +168,66 @@ export default function TransactionManager({ householdId, userId, initial, initi
   const isDateSort = sort === "date_desc" || sort === "date_asc";
 
   const mobileGroups = useMemo(() => {
-    if (!isDateSort) return [{ label: null as string | null, items: filtered }];
+    if (!isDateSort) return [{ label: null as string | null, items: shown }];
     const groups: { label: string; items: Transaction[] }[] = [];
-    for (const r of filtered) {
+    for (const r of shown) {
       const label = dayLabel(r.date);
       const last = groups[groups.length - 1];
       if (last && last.label === label) last.items.push(r);
       else groups.push({ label, items: [r] });
     }
     return groups;
-  }, [filtered, isDateSort]);
+  }, [shown, isDateSort]);
 
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
+  // Sugerir categoría a partir del comercio: primero las reglas aprendidas,
+  // luego el diccionario de comercios habituales.
+  function suggestCategory(merchant: string, t: TransactionType): string {
+    const m = merchant.trim().toLowerCase();
+    if (!m || t !== "expense") return "";
+    const rule = rules.find((r) => r.merchant_pattern && m.includes(r.merchant_pattern));
+    if (rule && categories.some((c) => c.id === rule.category_id && c.type === "expense")) return rule.category_id;
+    const key = Object.keys(merchantSuggestions).find((k) => m.includes(k));
+    if (key) {
+      const match = categories.find((c) => c.type === "expense" && c.name.toLowerCase() === merchantSuggestions[key].toLowerCase());
+      if (match) return match.id;
+    }
+    return "";
+  }
+
+  function trapTab(e: React.KeyboardEvent) {
+    if (e.key !== "Tab" || !modalRef.current) return;
+    const els = modalRef.current.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
+    );
+    if (!els.length) return;
+    const first = els[0];
+    const last = els[els.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  async function save(e: React.FormEvent | null, again = false) {
+    e?.preventDefault();
     if (!form) return;
+
+    const amount = Number(form.amount.replace(",", "."));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast("Introduce un importe válido mayor que cero.", "error");
+      return;
+    }
+
     setBusy(true);
     const s = createClient();
     const payload = {
       household_id: householdId,
       user_id: userId,
       concept: form.concept.trim(),
-      amount: Number(form.amount.replace(",", ".")),
+      amount,
       date: form.date,
       category_id: form.category_id || null,
       type: form.type,
@@ -178,7 +253,15 @@ export default function TransactionManager({ householdId, userId, initial, initi
         );
       }
       setRows(form.id ? rows.map((r) => (r.id === form.id ? data : r)) : [data, ...rows]);
-      setForm(null);
+      if (again && !form.id) {
+        const nextType = form.type;
+        const keepDate = form.date;
+        setForm({ ...blank(nextType), date: keepDate });
+        toast("Movimiento guardado", "success");
+        setTimeout(() => conceptRef.current?.focus(), 0);
+      } else {
+        setForm(null);
+      }
     } else {
       toast(error?.message ?? "No se pudo guardar el movimiento.", "error");
     }
@@ -208,6 +291,8 @@ export default function TransactionManager({ householdId, userId, initial, initi
       receipt_text: r.receipt_text ?? "",
     });
   }
+
+  const quickCats = form ? frequentCategories.filter((c) => c.type === form.type).slice(0, 5) : [];
 
   return (
     <>
@@ -275,7 +360,7 @@ export default function TransactionManager({ householdId, userId, initial, initi
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => (
+              {shown.map((r) => (
                 <tr key={r.id}>
                   <td>{dateLabel(r.date)}</td>
                   <td>
@@ -289,8 +374,8 @@ export default function TransactionManager({ householdId, userId, initial, initi
                   <td><Money value={r.amount} /></td>
                   <td>
                     <div className="chip-row" style={{ justifyContent: "flex-end" }}>
-                      <button className="btn btn-ghost" onClick={() => edit(r)} disabled={deletingId === r.id}><Pencil size={16} /></button>
-                      <button className="btn btn-ghost expense" onClick={() => remove(r.id)} disabled={deletingId === r.id}>
+                      <button className="btn btn-ghost" aria-label={`Editar ${r.concept}`} onClick={() => edit(r)} disabled={deletingId === r.id}><Pencil size={16} /></button>
+                      <button className="btn btn-ghost expense" aria-label={`Eliminar ${r.concept}`} onClick={() => remove(r.id)} disabled={deletingId === r.id}>
                         {deletingId === r.id ? <LoaderCircle size={16} className="spin" /> : <Trash2 size={16} />}
                       </button>
                     </div>
@@ -298,6 +383,15 @@ export default function TransactionManager({ householdId, userId, initial, initi
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={3}>{filtered.length} movimiento{filtered.length === 1 ? "" : "s"}{hasMore ? ` · mostrando ${shown.length}` : ""}</td>
+                <td colSpan={3} style={{ textAlign: "right" }}>
+                  {filteredExpense > 0 && <span className="expense">−<Money value={filteredExpense} /></span>}
+                  {filteredIncome > 0 && <span className="income" style={{ marginLeft: 12 }}>+<Money value={filteredIncome} /></span>}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         ) : (
           <div className="empty">
@@ -344,6 +438,7 @@ export default function TransactionManager({ householdId, userId, initial, initi
                         <button
                           type="button"
                           className="btn btn-ghost"
+                          aria-label={`Más opciones de ${r.concept}`}
                           onClick={(e) => {
                             if (menuFor === r.id) {
                               setMenuFor(null);
@@ -373,14 +468,30 @@ export default function TransactionManager({ householdId, userId, initial, initi
             ))}
           </div>
         )}
+
+        {hasMore && (
+          <div style={{ textAlign: "center", padding: "16px 0 6px" }}>
+            <button type="button" className="btn btn-soft" onClick={() => setVisible((v) => v + PAGE_SIZE)}>
+              Ver más · {filtered.length - visible} restantes
+            </button>
+          </div>
+        )}
       </div>
 
       {form && (
-        <div className="modal-backdrop">
-          <form className="modal" onSubmit={save}>
+        <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setForm(null); }}>
+          <form
+            className="modal"
+            ref={modalRef}
+            onSubmit={(e) => save(e)}
+            onKeyDown={trapTab}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tm-modal-title"
+          >
             <div className="modal-head">
-              <h2>{form.id ? "Editar movimiento" : "Nuevo movimiento"}</h2>
-              <button type="button" className="btn btn-ghost" onClick={() => setForm(null)}><X /></button>
+              <h2 id="tm-modal-title">{form.id ? "Editar movimiento" : "Nuevo movimiento"}</h2>
+              <button type="button" className="btn btn-ghost" aria-label="Cerrar" onClick={() => setForm(null)}><X /></button>
             </div>
             <div className="chip-row" style={{ marginBottom: 14 }}>
               <button type="button" className={`chip ${form.type === "expense" ? "active" : ""}`} onClick={() => setForm({ ...form, type: "expense", category_id: "" })}>Gasto</button>
@@ -389,7 +500,7 @@ export default function TransactionManager({ householdId, userId, initial, initi
             <div className="form-grid">
               <div className="field">
                 <label>Concepto</label>
-                <input className="input" value={form.concept} onChange={(e) => setForm({ ...form, concept: e.target.value })} required />
+                <input className="input" ref={conceptRef} autoFocus value={form.concept} onChange={(e) => setForm({ ...form, concept: e.target.value })} required />
               </div>
               <div className="field">
                 <label>Importe</label>
@@ -400,24 +511,53 @@ export default function TransactionManager({ householdId, userId, initial, initi
                 <input className="input" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
               </div>
               <div className="field">
+                <label>Comercio</label>
+                <input
+                  className="input"
+                  value={form.merchant}
+                  onChange={(e) => setForm({ ...form, merchant: e.target.value })}
+                  onBlur={(e) => {
+                    const sug = suggestCategory(e.target.value, form.type);
+                    if (sug) setForm((f) => (f && !f.category_id ? { ...f, category_id: sug } : f));
+                  }}
+                />
+              </div>
+              <div className="field" style={{ gridColumn: "1 / -1" }}>
                 <label>Categoría</label>
+                {quickCats.length > 0 && (
+                  <div className="chip-row" style={{ marginBottom: 8 }}>
+                    {quickCats.map((c) => (
+                      <button
+                        type="button"
+                        key={c.id}
+                        className={`chip ${form.category_id === c.id ? "active" : ""}`}
+                        onClick={() => setForm({ ...form, category_id: form.category_id === c.id ? "" : c.id })}
+                      >
+                        {c.icon} {c.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <select className="select" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
                   <option value="">Sin categoría</option>
                   {categories.filter((c) => c.type === form.type).map((c) => <option value={c.id} key={c.id}>{c.icon} {c.name}</option>)}
                 </select>
               </div>
-              <div className="field">
-                <label>Comercio</label>
-                <input className="input" value={form.merchant} onChange={(e) => setForm({ ...form, merchant: e.target.value })} />
-              </div>
-              <div className="field">
+              <div className="field" style={{ gridColumn: "1 / -1" }}>
                 <label>Nota</label>
                 <input className="input" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
               </div>
             </div>
-            <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 20 }}>
+            <div className="toolbar" style={{ justifyContent: "space-between", marginTop: 20 }}>
               <button type="button" className="btn btn-soft" onClick={() => setForm(null)}>Cancelar</button>
-              <button className="btn btn-primary" disabled={busy}>{busy ? "Guardando…" : "Guardar"}</button>
+              <div className="toolbar" style={{ gap: 8 }}>
+                {!form.id && (
+                  <button type="button" className="btn btn-soft" disabled={busy} onClick={() => save(null, true)}>
+                    Guardar y añadir otro
+                  </button>
+                )}
+                <button className="btn btn-primary" disabled={busy}>{busy ? "Guardando…" : "Guardar"}</button>
+              </div>
             </div>
           </form>
         </div>
