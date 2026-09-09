@@ -1,6 +1,10 @@
 export const eur = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
-export function monthKey(date = new Date()) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-01`; }
-export function dateKey(date = new Date()) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`; }
+export function monthKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
+}
+export function dateKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
 export function relativeDayLabel(value: string) {
   if (value === dateKey()) return "Hoy";
   const yesterday = new Date();
@@ -8,7 +12,9 @@ export function relativeDayLabel(value: string) {
   if (value === dateKey(yesterday)) return "Ayer";
   return new Date(`${value}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
 }
-export function cn(...classes: Array<string | false | null | undefined>) { return classes.filter(Boolean).join(" "); }
+export function cn(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
 
 const CATEGORY_PALETTE = ["#8b5cf6", "#ec4899", "#3b82f6", "#10b981", "#f59e0b", "#6366f1", "#14b8a6", "#f43f5e"];
 
@@ -28,7 +34,11 @@ export function savingsTier(rate: number): { label: string; className: "good" | 
 }
 
 export function formatDateEs(value: string) {
-  return new Date(`${value}T12:00:00`).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return new Date(`${value}T12:00:00`).toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 export function monthLabel(key: string) {
@@ -39,14 +49,20 @@ export function monthLabel(key: string) {
 export function nextMonthKey(key: string) {
   let [y, m] = key.split("-").map(Number);
   m++;
-  if (m > 12) { m = 1; y++; }
+  if (m > 12) {
+    m = 1;
+    y++;
+  }
   return `${y}-${String(m).padStart(2, "0")}`;
 }
 
 export function prevMonthKey(key: string) {
   let [y, m] = key.split("-").map(Number);
   m--;
-  if (m < 1) { m = 12; y--; }
+  if (m < 1) {
+    m = 12;
+    y--;
+  }
   return `${y}-${String(m).padStart(2, "0")}`;
 }
 
@@ -57,12 +73,17 @@ export function monthRange(startKey: string, endKey: string) {
   while (y < ey || (y === ey && m <= em)) {
     months.push(`${y}-${String(m).padStart(2, "0")}`);
     m++;
-    if (m > 12) { m = 1; y++; }
+    if (m > 12) {
+      m = 1;
+      y++;
+    }
   }
   return months;
 }
 
-export function transactionsHref(opts: { type?: "expense" | "income"; category?: string | null; from?: string; to?: string } = {}) {
+export function transactionsHref(
+  opts: { type?: "expense" | "income"; category?: string | null; from?: string; to?: string } = {}
+) {
   const qs = new URLSearchParams();
   if (opts.type) qs.set("type", opts.type);
   if (opts.category) qs.set("category", opts.category);

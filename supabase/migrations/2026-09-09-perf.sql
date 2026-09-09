@@ -40,29 +40,11 @@ end $$;
 
 grant execute on function public.process_due_recurring(uuid) to authenticated;
 
--- ───────────────────────────────────────────────────────────────────────────
--- 2) monthly_category_totals: agregación para el Histórico
--- El Histórico descargaba TODOS los movimientos y los agregaba en el navegador.
--- Esta función devuelve ya los totales por mes/categoría/tipo (miles de filas
--- pasan a decenas). security invoker => respeta la RLS de transactions.
--- ───────────────────────────────────────────────────────────────────────────
-
-create or replace function public.monthly_category_totals(p_household_id uuid)
-returns table (month text, category_id uuid, "type" transaction_type, total numeric)
-language sql stable security invoker set search_path=public as $$
-  select to_char(t.date, 'YYYY-MM') as month,
-         t.category_id,
-         t.type,
-         sum(t.amount)::numeric as total
-  from transactions t
-  where t.household_id = p_household_id
-  group by 1, 2, t.type
-$$;
-
-grant execute on function public.monthly_category_totals(uuid) to authenticated;
+-- (Se retiró monthly_category_totals: el Histórico pasó a agruparse por periodos,
+--  que pueden solaparse o no ser meses naturales, así que se calcula en cliente.)
 
 -- ───────────────────────────────────────────────────────────────────────────
--- 3) get_session_bootstrap: 1 llamada en vez de 3
+-- 2) get_session_bootstrap: 1 llamada en vez de 3
 -- getSessionContext() hacía: get_my_households + user_preferences + households
 -- (periodo activo), en serie. Esto lo une en una sola llamada.
 -- ───────────────────────────────────────────────────────────────────────────

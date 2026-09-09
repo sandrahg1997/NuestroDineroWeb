@@ -10,8 +10,20 @@ export type ChartTheme = {
   tooltipText: string;
 };
 
-const LIGHT: ChartTheme = { axis: "#8b8494", grid: "#e8e3ee", tooltipBg: "#ffffff", tooltipBorder: "#e8e3ee", tooltipText: "#24212b" };
-const DARK: ChartTheme = { axis: "#a89cb6", grid: "#332c44", tooltipBg: "#1e1929", tooltipBorder: "#332c44", tooltipText: "#f1edf7" };
+const LIGHT: ChartTheme = {
+  axis: "#8b8494",
+  grid: "#e8e3ee",
+  tooltipBg: "#ffffff",
+  tooltipBorder: "#e8e3ee",
+  tooltipText: "#24212b",
+};
+const DARK: ChartTheme = {
+  axis: "#a89cb6",
+  grid: "#332c44",
+  tooltipBg: "#1e1929",
+  tooltipBorder: "#332c44",
+  tooltipText: "#f1edf7",
+};
 
 // Colores de ejes y tooltip para recharts, sincronizados con el tema activo
 // (data-theme en <html> o prefers-color-scheme cuando el modo es "system").

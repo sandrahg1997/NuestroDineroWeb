@@ -14,7 +14,7 @@ type Props = {
 // dos decimales con coma (12.5 → "12,50"). Deja el texto intacto si no es válido.
 const MoneyInput = forwardRef<HTMLInputElement, Props>(function MoneyInput(
   { value, onChange, required, placeholder, autoFocus },
-  ref,
+  ref
 ) {
   return (
     <span className="money-input">

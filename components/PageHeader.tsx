@@ -1,1 +1,19 @@
-export default function PageHeader({title,subtitle,actions}:{title:string;subtitle?:string;actions?:React.ReactNode}){return <div className="topbar"><div><div className="title">{title}</div>{subtitle&&<div className="subtitle">{subtitle}</div>}</div>{actions}</div>}
+export default function PageHeader({
+  title,
+  subtitle,
+  actions,
+}: {
+  title: string;
+  subtitle?: string;
+  actions?: React.ReactNode;
+}) {
+  return (
+    <div className="topbar">
+      <div>
+        <div className="title">{title}</div>
+        {subtitle && <div className="subtitle">{subtitle}</div>}
+      </div>
+      {actions}
+    </div>
+  );
+}

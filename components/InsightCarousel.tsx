@@ -42,9 +42,13 @@ export default function InsightCarousel({ insights }: { insights: Insight[] }) {
             </>
           );
           return insight.href ? (
-            <Link href={insight.href} className="insight-slide" key={i}>{content}</Link>
+            <Link href={insight.href} className="insight-slide" key={i}>
+              {content}
+            </Link>
           ) : (
-            <div className="insight-slide" key={i}>{content}</div>
+            <div className="insight-slide" key={i}>
+              {content}
+            </div>
           );
         })}
       </div>

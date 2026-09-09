@@ -14,14 +14,27 @@ type EditDraft = { name: string; start: string; end: string };
 
 async function fetchSummary(householdId: string, start: string, end: string) {
   const s = createClient();
-  const { data } = await s.from("transactions").select("type,amount").eq("household_id", householdId).gte("date", start).lte("date", end);
+  const { data } = await s
+    .from("transactions")
+    .select("type,amount")
+    .eq("household_id", householdId)
+    .gte("date", start)
+    .lte("date", end);
   const rows = data ?? [];
   const expense = rows.filter((r) => r.type === "expense").reduce((t, r) => t + Number(r.amount), 0);
   const income = rows.filter((r) => r.type === "income").reduce((t, r) => t + Number(r.amount), 0);
   return { expense, income };
 }
 
-export default function PeriodManager({ householdId, initial, activePeriodId }: { householdId: string; initial: PeriodRow[]; activePeriodId: string | null }) {
+export default function PeriodManager({
+  householdId,
+  initial,
+  activePeriodId,
+}: {
+  householdId: string;
+  initial: PeriodRow[];
+  activePeriodId: string | null;
+}) {
   const { toast, confirm } = useToast();
   const [rows, setRows] = useState(initial);
   const [activeId, setActiveId] = useState(activePeriodId);
@@ -41,14 +54,20 @@ export default function PeriodManager({ householdId, initial, activePeriodId }: 
     setCreating(true);
     const s = createClient();
     const label = name.trim() || defaultPeriodName(start, end);
-    const { data, error } = await s.from("periods").insert({ household_id: householdId, name: label, start_date: start, end_date: end }).select().single();
+    const { data, error } = await s
+      .from("periods")
+      .insert({ household_id: householdId, name: label, start_date: start, end_date: end })
+      .select()
+      .single();
     if (error) {
       toast(error.message, "error");
       setCreating(false);
       return;
     }
     const summary = await fetchSummary(householdId, start, end);
-    setRows((prev) => [{ ...(data as Period), ...summary }, ...prev].sort((a, b) => b.start_date.localeCompare(a.start_date)));
+    setRows((prev) =>
+      [{ ...(data as Period), ...summary }, ...prev].sort((a, b) => b.start_date.localeCompare(a.start_date))
+    );
     setName("");
     setStart("");
     setEnd("");
@@ -63,14 +82,27 @@ export default function PeriodManager({ householdId, initial, activePeriodId }: 
   async function saveEdit(id: string) {
     setSavingEdit(true);
     const s = createClient();
-    const { data, error } = await s.from("periods").update({ name: draft.name.trim() || defaultPeriodName(draft.start, draft.end), start_date: draft.start, end_date: draft.end }).eq("id", id).select().single();
+    const { data, error } = await s
+      .from("periods")
+      .update({
+        name: draft.name.trim() || defaultPeriodName(draft.start, draft.end),
+        start_date: draft.start,
+        end_date: draft.end,
+      })
+      .eq("id", id)
+      .select()
+      .single();
     if (error) {
       toast(error.message, "error");
       setSavingEdit(false);
       return;
     }
     const summary = await fetchSummary(householdId, draft.start, draft.end);
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...(data as Period), ...summary } : r)).sort((a, b) => b.start_date.localeCompare(a.start_date)));
+    setRows((prev) =>
+      prev
+        .map((r) => (r.id === id ? { ...(data as Period), ...summary } : r))
+        .sort((a, b) => b.start_date.localeCompare(a.start_date))
+    );
     setEditingId(null);
     setSavingEdit(false);
   }
@@ -85,7 +117,13 @@ export default function PeriodManager({ householdId, initial, activePeriodId }: 
   }
 
   async function removePeriod(id: string) {
-    if (!(await confirm("¿Eliminar este periodo? Los movimientos que caían dentro no se borran, solo dejan de verse agrupados en él.", { confirmLabel: "Eliminar", danger: true }))) return;
+    if (
+      !(await confirm(
+        "¿Eliminar este periodo? Los movimientos que caían dentro no se borran, solo dejan de verse agrupados en él.",
+        { confirmLabel: "Eliminar", danger: true }
+      ))
+    )
+      return;
     setDeletingId(id);
     const s = createClient();
     const { error } = await s.from("periods").delete().eq("id", id);
@@ -107,12 +145,22 @@ export default function PeriodManager({ householdId, initial, activePeriodId }: 
   return (
     <>
       <form className="card" onSubmit={createPeriod} style={{ marginBottom: 18 }}>
-        <h2><CalendarRange size={20} /> Nuevo periodo</h2>
-        <p className="subtitle">Da igual la duración: pueden ser meses naturales, de nómina a nómina, o lo que necesites. Se pueden solapar sin problema.</p>
+        <h2>
+          <CalendarRange size={20} /> Nuevo periodo
+        </h2>
+        <p className="subtitle">
+          Da igual la duración: pueden ser meses naturales, de nómina a nómina, o lo que necesites. Se pueden solapar
+          sin problema.
+        </p>
         <div className="form-grid" style={{ marginTop: 14 }}>
           <div className="field">
             <label>Nombre (opcional)</label>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Se genera automáticamente" />
+            <input
+              className="input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Se genera automáticamente"
+            />
           </div>
           <div className="field">
             <label>Desde</label>
@@ -141,20 +189,44 @@ export default function PeriodManager({ householdId, initial, activePeriodId }: 
                   <div className="form-grid">
                     <div className="field">
                       <label>Nombre</label>
-                      <input className="input" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+                      <input
+                        className="input"
+                        value={draft.name}
+                        onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                      />
                     </div>
                     <div className="field">
                       <label>Desde</label>
-                      <input className="input" type="date" value={draft.start} onChange={(e) => setDraft({ ...draft, start: e.target.value })} />
+                      <input
+                        className="input"
+                        type="date"
+                        value={draft.start}
+                        onChange={(e) => setDraft({ ...draft, start: e.target.value })}
+                      />
                     </div>
                     <div className="field">
                       <label>Hasta</label>
-                      <input className="input" type="date" value={draft.end} onChange={(e) => setDraft({ ...draft, end: e.target.value })} />
+                      <input
+                        className="input"
+                        type="date"
+                        value={draft.end}
+                        onChange={(e) => setDraft({ ...draft, end: e.target.value })}
+                      />
                     </div>
                   </div>
                   <div className="toolbar" style={{ marginTop: 14, justifyContent: "flex-start" }}>
-                    <button type="button" className="btn btn-primary" onClick={() => saveEdit(p.id)} disabled={savingEdit}>{savingEdit ? "Guardando…" : "Guardar"}</button>
-                    <button type="button" className="btn btn-ghost" onClick={() => setEditingId(null)}><X size={16} />Cancelar</button>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => saveEdit(p.id)}
+                      disabled={savingEdit}
+                    >
+                      {savingEdit ? "Guardando…" : "Guardar"}
+                    </button>
+                    <button type="button" className="btn btn-ghost" onClick={() => setEditingId(null)}>
+                      <X size={16} />
+                      Cancelar
+                    </button>
                   </div>
                 </>
               ) : (
@@ -165,26 +237,47 @@ export default function PeriodManager({ householdId, initial, activePeriodId }: 
                         <strong>{p.name}</strong>
                         {isActive && <span className="pill">Activo</span>}
                       </div>
-                      <div className="subtitle">{formatDateEs(p.start_date)} – {formatDateEs(p.end_date)}</div>
+                      <div className="subtitle">
+                        {formatDateEs(p.start_date)} – {formatDateEs(p.end_date)}
+                      </div>
                     </div>
                     <div className="chip-row">
-                      <button type="button" className="btn btn-ghost" onClick={() => startEdit(p)}><Pencil size={16} /></button>
-                      <button type="button" className="btn btn-ghost expense" onClick={() => removePeriod(p.id)} disabled={deletingId === p.id}>
+                      <button type="button" className="btn btn-ghost" onClick={() => startEdit(p)}>
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost expense"
+                        onClick={() => removePeriod(p.id)}
+                        disabled={deletingId === p.id}
+                      >
                         {deletingId === p.id ? <LoaderCircle size={16} className="spin" /> : <Trash2 size={16} />}
                       </button>
                     </div>
                   </div>
                   <div className="toolbar" style={{ marginTop: 14, justifyContent: "space-between" }}>
                     <div className="subtitle">
-                      <span className="income" style={{ fontWeight: 750 }}><Money value={p.income} /></span> ingresos ·{" "}
-                      <span className="expense" style={{ fontWeight: 750 }}><Money value={p.expense} /></span> gastos ·{" "}
-                      balance <Money value={balance} />
+                      <span className="income" style={{ fontWeight: 750 }}>
+                        <Money value={p.income} />
+                      </span>{" "}
+                      ingresos ·{" "}
+                      <span className="expense" style={{ fontWeight: 750 }}>
+                        <Money value={p.expense} />
+                      </span>{" "}
+                      gastos · balance <Money value={balance} />
                     </div>
                   </div>
                   <div className="toolbar" style={{ marginTop: 14, justifyContent: "flex-start" }}>
-                    <Link href={`/periods/${p.id}`} className="btn btn-soft">Ver resumen</Link>
+                    <Link href={`/periods/${p.id}`} className="btn btn-soft">
+                      Ver resumen
+                    </Link>
                     {!isActive && (
-                      <button type="button" className="btn btn-ghost" onClick={() => setActive(p.id)} disabled={settingActiveId === p.id}>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => setActive(p.id)}
+                        disabled={settingActiveId === p.id}
+                      >
                         {settingActiveId === p.id ? <LoaderCircle size={16} className="spin" /> : <Star size={16} />}
                         Marcar como activo
                       </button>
@@ -197,9 +290,14 @@ export default function PeriodManager({ householdId, initial, activePeriodId }: 
         })}
         {!rows.length && (
           <div className="card empty">
-            <span className="empty-icon"><CalendarRange size={22} /></span>
+            <span className="empty-icon">
+              <CalendarRange size={22} />
+            </span>
             <strong>Sin periodos todavía</strong>
-            <p>Crea tu primer periodo con el formulario de arriba: un mes natural, de nómina a nómina, o lo que necesites.</p>
+            <p>
+              Crea tu primer periodo con el formulario de arriba: un mes natural, de nómina a nómina, o lo que
+              necesites.
+            </p>
           </div>
         )}
       </div>

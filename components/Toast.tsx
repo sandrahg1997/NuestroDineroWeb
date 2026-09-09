@@ -17,7 +17,12 @@ type AskTextOptions = {
 };
 type ConfirmState =
   | { kind: "confirm"; message: string; opts: Required<ConfirmOptions>; resolve: (value: boolean) => void }
-  | { kind: "text"; message: string; opts: Required<Omit<AskTextOptions, "requireExact">> & { requireExact: string | null }; resolve: (value: string | null) => void }
+  | {
+      kind: "text";
+      message: string;
+      opts: Required<Omit<AskTextOptions, "requireExact">> & { requireExact: string | null };
+      resolve: (value: string | null) => void;
+    }
   | null;
 
 type ToastApi = {
@@ -42,12 +47,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const dismiss = useCallback((id: number) => setItems((prev) => prev.filter((t) => t.id !== id)), []);
 
-  const toast = useCallback((message: string, kind: ToastKind = "info") => {
-    const id = ++idRef.current;
-    setItems((prev) => [...prev, { id, message, kind }]);
-    // Los errores se quedan hasta que el usuario los cierra; el resto se van solos.
-    if (kind !== "error") setTimeout(() => dismiss(id), 4200);
-  }, [dismiss]);
+  const toast = useCallback(
+    (message: string, kind: ToastKind = "info") => {
+      const id = ++idRef.current;
+      setItems((prev) => [...prev, { id, message, kind }]);
+      // Los errores se quedan hasta que el usuario los cierra; el resto se van solos.
+      if (kind !== "error") setTimeout(() => dismiss(id), 4200);
+    },
+    [dismiss]
+  );
 
   const confirm = useCallback(
     (message: string, options?: ConfirmOptions) =>
@@ -63,7 +71,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           resolve,
         });
       }),
-    [],
+    []
   );
 
   const askText = useCallback(
@@ -84,22 +92,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           resolve,
         });
       }),
-    [],
+    []
   );
 
   const api = useMemo(() => ({ toast, confirm, askText }), [toast, confirm, askText]);
 
-  const close = useCallback(
-    (value: boolean | string | null) => {
-      setDialog((current) => {
-        if (!current) return null;
-        if (current.kind === "confirm") current.resolve(value === true);
-        else current.resolve(typeof value === "string" ? value : null);
-        return null;
-      });
-    },
-    [],
-  );
+  const close = useCallback((value: boolean | string | null) => {
+    setDialog((current) => {
+      if (!current) return null;
+      if (current.kind === "confirm") current.resolve(value === true);
+      else current.resolve(typeof value === "string" ? value : null);
+      return null;
+    });
+  }, []);
 
   useEffect(() => {
     if (!dialog) return;
@@ -154,7 +159,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             )}
 
             <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 18 }}>
-              <button type="button" className="btn btn-ghost" onClick={() => close(dialog.kind === "confirm" ? false : null)}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => close(dialog.kind === "confirm" ? false : null)}
+              >
                 {dialog.opts.cancelLabel}
               </button>
               <button

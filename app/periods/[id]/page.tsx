@@ -26,11 +26,28 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
   if (!user) redirect("/login");
   if (!householdId) redirect("/settings");
 
-  const { data: period } = await supabase.from("periods").select("*").eq("id", id).eq("household_id", householdId).maybeSingle();
+  const { data: period } = await supabase
+    .from("periods")
+    .select("*")
+    .eq("id", id)
+    .eq("household_id", householdId)
+    .maybeSingle();
   if (!period) notFound();
 
   const summary = await computePeriodSummary(supabase, householdId, period.start_date, period.end_date, period.id);
-  const { expense, income, balance, savingsRate, categoryData, byDay, topCategory, budgetTotal, budgetSpent, budgetPercentage, rows } = summary;
+  const {
+    expense,
+    income,
+    balance,
+    savingsRate,
+    categoryData,
+    byDay,
+    topCategory,
+    budgetTotal,
+    budgetSpent,
+    budgetPercentage,
+    rows,
+  } = summary;
   const isActive = activePeriod?.id === period.id;
 
   return (
@@ -38,46 +55,70 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
       <PageHeader
         title={period.name}
         subtitle={`${formatDateEs(period.start_date)} – ${formatDateEs(period.end_date)}`}
-        actions={<Link href="/periods" className="btn btn-soft">Volver a periodos</Link>}
+        actions={
+          <Link href="/periods" className="btn btn-soft">
+            Volver a periodos
+          </Link>
+        }
       />
 
       <section className="dashboard-hero">
         <div className="hero-copy">
           {isActive ? (
-            <div className="hero-kicker"><Star size={15} /> Periodo activo</div>
+            <div className="hero-kicker">
+              <Star size={15} /> Periodo activo
+            </div>
           ) : (
             <form action={markActive}>
               <input type="hidden" name="periodId" value={period.id} />
-              <SubmitButton className="btn btn-soft" pendingText="Activando…">Marcar como activo</SubmitButton>
+              <SubmitButton className="btn btn-soft" pendingText="Activando…">
+                Marcar como activo
+              </SubmitButton>
             </form>
           )}
-          <p className="hero-label" style={{ marginTop: 16 }}>Balance del periodo</p>
-          <h1 className={balance >= 0 ? "hero-balance positive" : "hero-balance negative"}><Money value={balance} /></h1>
+          <p className="hero-label" style={{ marginTop: 16 }}>
+            Balance del periodo
+          </p>
+          <h1 className={balance >= 0 ? "hero-balance positive" : "hero-balance negative"}>
+            <Money value={balance} />
+          </h1>
         </div>
-        <div className="hero-orb" aria-hidden="true"><WalletCards size={54} /></div>
+        <div className="hero-orb" aria-hidden="true">
+          <WalletCards size={54} />
+        </div>
         <div className="hero-glow hero-glow-one" />
         <div className="hero-glow hero-glow-two" />
       </section>
 
       <section className="dashboard-metrics">
         <article className="dashboard-metric-card">
-          <div className="metric-icon metric-icon-expense"><ReceiptText size={20} /></div>
+          <div className="metric-icon metric-icon-expense">
+            <ReceiptText size={20} />
+          </div>
           <div>
             <p className="metric-label">Gastado</p>
-            <p className="dashboard-metric-value"><Money value={expense} /></p>
+            <p className="dashboard-metric-value">
+              <Money value={expense} />
+            </p>
           </div>
         </article>
 
         <article className="dashboard-metric-card">
-          <div className="metric-icon metric-icon-income"><ArrowUpRight size={20} /></div>
+          <div className="metric-icon metric-icon-income">
+            <ArrowUpRight size={20} />
+          </div>
           <div>
             <p className="metric-label">Ingresos</p>
-            <p className="dashboard-metric-value"><Money value={income} /></p>
+            <p className="dashboard-metric-value">
+              <Money value={income} />
+            </p>
           </div>
         </article>
 
         <article className="dashboard-metric-card">
-          <div className="metric-icon metric-icon-saving"><PiggyBank size={20} /></div>
+          <div className="metric-icon metric-icon-saving">
+            <PiggyBank size={20} />
+          </div>
           <div>
             <p className="metric-label">Tasa de ahorro</p>
             <p className="dashboard-metric-value">{savingsRate}%</p>
@@ -90,7 +131,15 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
           <div className="section-head dashboard-section-head">
             <div>
               <span className="eyebrow">Presupuesto del periodo</span>
-              <h2>{budgetTotal ? <><Money value={budgetSpent} /> de <Money value={budgetTotal} /></> : "Sin presupuesto configurado"}</h2>
+              <h2>
+                {budgetTotal ? (
+                  <>
+                    <Money value={budgetSpent} /> de <Money value={budgetTotal} />
+                  </>
+                ) : (
+                  "Sin presupuesto configurado"
+                )}
+              </h2>
             </div>
             {budgetTotal > 0 && <strong>{budgetPercentage}%</strong>}
           </div>
@@ -106,11 +155,25 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
           <span className="eyebrow">Dato destacado</span>
           <div className="insight-icon">{topCategory ? "🏆" : "🌱"}</div>
           <h2>{topCategory ? topCategory.name : "Sin datos"}</h2>
-          <p>{topCategory ? <>Es tu categoría con más gasto: <Money value={topCategory.value} />.</> : "No hay movimientos en este periodo."}</p>
+          <p>
+            {topCategory ? (
+              <>
+                Es tu categoría con más gasto: <Money value={topCategory.value} />.
+              </>
+            ) : (
+              "No hay movimientos en este periodo."
+            )}
+          </p>
         </article>
       </section>
 
-      <DashboardChartsLoader byCategory={categoryData} byDay={byDay} hideAmounts={hideAmounts} from={period.start_date} to={period.end_date} />
+      <DashboardChartsLoader
+        byCategory={categoryData}
+        byDay={byDay}
+        hideAmounts={hideAmounts}
+        from={period.start_date}
+        to={period.end_date}
+      />
 
       <div className="section-head recent-head">
         <div>
@@ -133,10 +196,13 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
               </div>
               <div className="recent-main">
                 <strong>{row.concept}</strong>
-                <span>{categoryName} · {relativeDayLabel(row.date)}</span>
+                <span>
+                  {categoryName} · {relativeDayLabel(row.date)}
+                </span>
               </div>
               <strong className={row.type === "expense" ? "expense" : "income"}>
-                {row.type === "expense" ? "−" : "+"}<Money value={Number(row.amount)} />
+                {row.type === "expense" ? "−" : "+"}
+                <Money value={Number(row.amount)} />
               </strong>
             </div>
           );

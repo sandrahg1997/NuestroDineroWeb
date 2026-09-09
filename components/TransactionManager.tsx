@@ -37,7 +37,19 @@ const blank = (type: TransactionType = "expense"): Form => ({
   receipt_text: "",
 });
 
-export default function TransactionManager({ householdId, userId, initial, initialCategories, rules = [] }: { householdId: string; userId: string; initial: Transaction[]; initialCategories: Category[]; rules?: MerchantRule[] }) {
+export default function TransactionManager({
+  householdId,
+  userId,
+  initial,
+  initialCategories,
+  rules = [],
+}: {
+  householdId: string;
+  userId: string;
+  initial: Transaction[];
+  initialCategories: Category[];
+  rules?: MerchantRule[];
+}) {
   const [rows, setRows] = useState(initial);
   const [categories] = useState(initialCategories);
   const [form, setForm] = useState<Form | null>(null);
@@ -140,8 +152,14 @@ export default function TransactionManager({ householdId, userId, initial, initi
   const hasMore = filtered.length > visible;
 
   const isFiltering = !!debouncedQuery || activeFilterCount > 0;
-  const filteredExpense = useMemo(() => filtered.filter((r) => r.type === "expense").reduce((total, r) => total + Number(r.amount), 0), [filtered]);
-  const filteredIncome = useMemo(() => filtered.filter((r) => r.type === "income").reduce((total, r) => total + Number(r.amount), 0), [filtered]);
+  const filteredExpense = useMemo(
+    () => filtered.filter((r) => r.type === "expense").reduce((total, r) => total + Number(r.amount), 0),
+    [filtered]
+  );
+  const filteredIncome = useMemo(
+    () => filtered.filter((r) => r.type === "income").reduce((total, r) => total + Number(r.amount), 0),
+    [filtered]
+  );
 
   // Categorías más usadas, para acceso rápido al crear un movimiento.
   const frequentCategories = useMemo(() => {
@@ -195,7 +213,9 @@ export default function TransactionManager({ householdId, userId, initial, initi
     if (rule && categories.some((c) => c.id === rule.category_id && c.type === "expense")) return rule.category_id;
     const key = Object.keys(merchantSuggestions).find((k) => m.includes(k));
     if (key) {
-      const match = categories.find((c) => c.type === "expense" && c.name.toLowerCase() === merchantSuggestions[key].toLowerCase());
+      const match = categories.find(
+        (c) => c.type === "expense" && c.name.toLowerCase() === merchantSuggestions[key].toLowerCase()
+      );
       if (match) return match.id;
     }
     return "";
@@ -204,7 +224,7 @@ export default function TransactionManager({ householdId, userId, initial, initi
   function trapTab(e: React.KeyboardEvent) {
     if (e.key !== "Tab" || !modalRef.current) return;
     const els = modalRef.current.querySelectorAll<HTMLElement>(
-      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
+      "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])"
     );
     if (!els.length) return;
     const first = els[0];
@@ -247,7 +267,12 @@ export default function TransactionManager({ householdId, userId, initial, initi
     let error: any;
 
     if (form.id) {
-      ({ data, error } = await s.from("transactions").update(payload).eq("id", form.id).select("*,category:categories(*)").single());
+      ({ data, error } = await s
+        .from("transactions")
+        .update(payload)
+        .eq("id", form.id)
+        .select("*,category:categories(*)")
+        .single());
     } else {
       ({ data, error } = await s.from("transactions").insert(payload).select("*,category:categories(*)").single());
     }
@@ -255,7 +280,11 @@ export default function TransactionManager({ householdId, userId, initial, initi
     if (!error && data) {
       if (form.merchant.trim() && form.category_id) {
         await s.from("merchant_category_rules").upsert(
-          { household_id: householdId, merchant_pattern: form.merchant.trim().toLowerCase(), category_id: form.category_id },
+          {
+            household_id: householdId,
+            merchant_pattern: form.merchant.trim().toLowerCase(),
+            category_id: form.category_id,
+          },
           { onConflict: "household_id,merchant_pattern" }
         );
       }
@@ -306,25 +335,47 @@ export default function TransactionManager({ householdId, userId, initial, initi
       <div className="toolbar transaction-toolbar-top" style={{ marginBottom: 12 }}>
         <div className="search-input" style={{ position: "relative" }}>
           <Search size={17} style={{ position: "absolute", left: 12, top: 12, color: "var(--muted)" }} />
-          <input className="input" style={{ paddingLeft: 38 }} placeholder="Buscar comercio, concepto, categoría…" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input
+            className="input"
+            style={{ paddingLeft: 38 }}
+            placeholder="Buscar comercio, concepto, categoría…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
         </div>
         <button type="button" className="btn btn-soft filters-toggle" onClick={() => setFiltersOpen((o) => !o)}>
-          <SlidersHorizontal size={16} />Filtros{activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
+          <SlidersHorizontal size={16} />
+          Filtros{activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
         </button>
         <button className="btn btn-primary" onClick={() => setForm(blank())}>
-          <Plus size={17} />Añadir
+          <Plus size={17} />
+          Añadir
         </button>
       </div>
 
       <div className={`transaction-toolbar ${filtersOpen ? "open" : ""}`} style={{ marginBottom: 16 }}>
-        <select className="select" style={{ width: "100%" }} value={type} onChange={(e) => setType(e.target.value as any)}>
+        <select
+          className="select"
+          style={{ width: "100%" }}
+          value={type}
+          onChange={(e) => setType(e.target.value as any)}
+        >
           <option value="all">Todos</option>
           <option value="expense">Gastos</option>
           <option value="income">Ingresos</option>
         </select>
-        <select className="select" style={{ width: "100%" }} value={category} onChange={(e) => setCategory(e.target.value)}>
+        <select
+          className="select"
+          style={{ width: "100%" }}
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
           <option value="">Todas las categorías</option>
-          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
         </select>
         <div className="field">
           <label>Desde</label>
@@ -341,15 +392,27 @@ export default function TransactionManager({ householdId, userId, initial, initi
           <option value="amount_asc">Menor importe</option>
         </select>
         {activeFilterCount > 0 && (
-          <button type="button" className="btn btn-ghost" onClick={clearFilters}>Limpiar filtros</button>
+          <button type="button" className="btn btn-ghost" onClick={clearFilters}>
+            Limpiar filtros
+          </button>
         )}
       </div>
 
       {isFiltering && (
         <div className="filter-summary">
-          <span>{filtered.length} movimiento{filtered.length === 1 ? "" : "s"}</span>
-          {filteredExpense > 0 && <span className="expense">Gastado <Money value={filteredExpense} /></span>}
-          {filteredIncome > 0 && <span className="income">Ingresado <Money value={filteredIncome} /></span>}
+          <span>
+            {filtered.length} movimiento{filtered.length === 1 ? "" : "s"}
+          </span>
+          {filteredExpense > 0 && (
+            <span className="expense">
+              Gastado <Money value={filteredExpense} />
+            </span>
+          )}
+          {filteredIncome > 0 && (
+            <span className="income">
+              Ingresado <Money value={filteredIncome} />
+            </span>
+          )}
         </div>
       )}
 
@@ -375,14 +438,32 @@ export default function TransactionManager({ householdId, userId, initial, initi
                     {r.merchant && <div className="subtitle">{r.merchant}</div>}
                   </td>
                   <td>
-                    <span className="pill">{r.category?.icon} {r.category?.name ?? "Sin categoría"}</span>
+                    <span className="pill">
+                      {r.category?.icon} {r.category?.name ?? "Sin categoría"}
+                    </span>
                   </td>
-                  <td className={r.type === "expense" ? "expense" : "income"}>{r.type === "expense" ? "Gasto" : "Ingreso"}</td>
-                  <td><Money value={r.amount} /></td>
+                  <td className={r.type === "expense" ? "expense" : "income"}>
+                    {r.type === "expense" ? "Gasto" : "Ingreso"}
+                  </td>
+                  <td>
+                    <Money value={r.amount} />
+                  </td>
                   <td>
                     <div className="chip-row" style={{ justifyContent: "flex-end" }}>
-                      <button className="btn btn-ghost" aria-label={`Editar ${r.concept}`} onClick={() => edit(r)} disabled={deletingId === r.id}><Pencil size={16} /></button>
-                      <button className="btn btn-ghost expense" aria-label={`Eliminar ${r.concept}`} onClick={() => remove(r.id)} disabled={deletingId === r.id}>
+                      <button
+                        className="btn btn-ghost"
+                        aria-label={`Editar ${r.concept}`}
+                        onClick={() => edit(r)}
+                        disabled={deletingId === r.id}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        className="btn btn-ghost expense"
+                        aria-label={`Eliminar ${r.concept}`}
+                        onClick={() => remove(r.id)}
+                        disabled={deletingId === r.id}
+                      >
                         {deletingId === r.id ? <LoaderCircle size={16} className="spin" /> : <Trash2 size={16} />}
                       </button>
                     </div>
@@ -392,28 +473,46 @@ export default function TransactionManager({ householdId, userId, initial, initi
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={3}>{filtered.length} movimiento{filtered.length === 1 ? "" : "s"}{hasMore ? ` · mostrando ${shown.length}` : ""}</td>
+                <td colSpan={3}>
+                  {filtered.length} movimiento{filtered.length === 1 ? "" : "s"}
+                  {hasMore ? ` · mostrando ${shown.length}` : ""}
+                </td>
                 <td colSpan={3} style={{ textAlign: "right" }}>
-                  {filteredExpense > 0 && <span className="expense">−<Money value={filteredExpense} /></span>}
-                  {filteredIncome > 0 && <span className="income" style={{ marginLeft: 12 }}>+<Money value={filteredIncome} /></span>}
+                  {filteredExpense > 0 && (
+                    <span className="expense">
+                      −<Money value={filteredExpense} />
+                    </span>
+                  )}
+                  {filteredIncome > 0 && (
+                    <span className="income" style={{ marginLeft: 12 }}>
+                      +<Money value={filteredIncome} />
+                    </span>
+                  )}
                 </td>
               </tr>
             </tfoot>
           </table>
         ) : (
           <div className="empty">
-            <span className="empty-icon"><Inbox size={22} /></span>
+            <span className="empty-icon">
+              <Inbox size={22} />
+            </span>
             {isFiltering ? (
               <>
                 <strong>Sin resultados</strong>
                 <p>Ningún movimiento coincide con los filtros aplicados.</p>
-                <button type="button" className="btn btn-soft" onClick={clearFilters}>Limpiar filtros</button>
+                <button type="button" className="btn btn-soft" onClick={clearFilters}>
+                  Limpiar filtros
+                </button>
               </>
             ) : (
               <>
                 <strong>Aún no hay movimientos</strong>
                 <p>Añade tu primer gasto o ingreso para empezar a ver tus finanzas.</p>
-                <button type="button" className="btn btn-primary" onClick={() => setForm(blank())}><Plus size={16} />Añadir movimiento</button>
+                <button type="button" className="btn btn-primary" onClick={() => setForm(blank())}>
+                  <Plus size={16} />
+                  Añadir movimiento
+                </button>
               </>
             )}
           </div>
@@ -439,7 +538,8 @@ export default function TransactionManager({ householdId, userId, initial, initi
                     </div>
                     <div className="right">
                       <span className={`amount ${r.type === "expense" ? "expense" : "income"}`}>
-                        {r.type === "expense" ? "-" : "+"}<Money value={Math.abs(r.amount)} />
+                        {r.type === "expense" ? "-" : "+"}
+                        <Money value={Math.abs(r.amount)} />
                       </span>
                       <div className="row-menu" onClick={(e) => e.stopPropagation()}>
                         <button
@@ -460,8 +560,23 @@ export default function TransactionManager({ householdId, userId, initial, initi
                         </button>
                         {menuFor === r.id && (
                           <div className={`row-menu-popup ${menuOpenUp ? "open-up" : ""}`}>
-                            <button type="button" onClick={() => { edit(r); setMenuFor(null); }} disabled={deletingId === r.id}><Pencil size={15} />Editar</button>
-                            <button type="button" className="expense" onClick={() => remove(r.id)} disabled={deletingId === r.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                edit(r);
+                                setMenuFor(null);
+                              }}
+                              disabled={deletingId === r.id}
+                            >
+                              <Pencil size={15} />
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="expense"
+                              onClick={() => remove(r.id)}
+                              disabled={deletingId === r.id}
+                            >
                               {deletingId === r.id ? <LoaderCircle size={15} className="spin" /> : <Trash2 size={15} />}
                               {deletingId === r.id ? "Eliminando…" : "Eliminar"}
                             </button>
@@ -486,7 +601,12 @@ export default function TransactionManager({ householdId, userId, initial, initi
       </div>
 
       {form && (
-        <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setForm(null); }}>
+        <div
+          className="modal-backdrop"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setForm(null);
+          }}
+        >
           <form
             className="modal"
             ref={modalRef}
@@ -498,16 +618,37 @@ export default function TransactionManager({ householdId, userId, initial, initi
           >
             <div className="modal-head">
               <h2 id="tm-modal-title">{form.id ? "Editar movimiento" : "Nuevo movimiento"}</h2>
-              <button type="button" className="btn btn-ghost" aria-label="Cerrar" onClick={() => setForm(null)}><X /></button>
+              <button type="button" className="btn btn-ghost" aria-label="Cerrar" onClick={() => setForm(null)}>
+                <X />
+              </button>
             </div>
             <div className="chip-row" style={{ marginBottom: 14 }}>
-              <button type="button" className={`chip ${form.type === "expense" ? "active" : ""}`} onClick={() => setForm({ ...form, type: "expense", category_id: "" })}>Gasto</button>
-              <button type="button" className={`chip ${form.type === "income" ? "active" : ""}`} onClick={() => setForm({ ...form, type: "income", category_id: "" })}>Ingreso</button>
+              <button
+                type="button"
+                className={`chip ${form.type === "expense" ? "active" : ""}`}
+                onClick={() => setForm({ ...form, type: "expense", category_id: "" })}
+              >
+                Gasto
+              </button>
+              <button
+                type="button"
+                className={`chip ${form.type === "income" ? "active" : ""}`}
+                onClick={() => setForm({ ...form, type: "income", category_id: "" })}
+              >
+                Ingreso
+              </button>
             </div>
             <div className="form-grid">
               <div className="field">
                 <label>Concepto</label>
-                <input className="input" ref={conceptRef} autoFocus value={form.concept} onChange={(e) => setForm({ ...form, concept: e.target.value })} required />
+                <input
+                  className="input"
+                  ref={conceptRef}
+                  autoFocus
+                  value={form.concept}
+                  onChange={(e) => setForm({ ...form, concept: e.target.value })}
+                  required
+                />
               </div>
               <div className="field">
                 <label>Importe</label>
@@ -515,7 +656,13 @@ export default function TransactionManager({ householdId, userId, initial, initi
               </div>
               <div className="field">
                 <label>Fecha</label>
-                <input className="input" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+                <input
+                  className="input"
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                  required
+                />
               </div>
               <div className="field">
                 <label>Comercio</label>
@@ -545,25 +692,43 @@ export default function TransactionManager({ householdId, userId, initial, initi
                     ))}
                   </div>
                 )}
-                <select className="select" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
+                <select
+                  className="select"
+                  value={form.category_id}
+                  onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                >
                   <option value="">Sin categoría</option>
-                  {categories.filter((c) => c.type === form.type).map((c) => <option value={c.id} key={c.id}>{c.icon} {c.name}</option>)}
+                  {categories
+                    .filter((c) => c.type === form.type)
+                    .map((c) => (
+                      <option value={c.id} key={c.id}>
+                        {c.icon} {c.name}
+                      </option>
+                    ))}
                 </select>
               </div>
               <div className="field" style={{ gridColumn: "1 / -1" }}>
                 <label>Nota</label>
-                <input className="input" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
+                <input
+                  className="input"
+                  value={form.note}
+                  onChange={(e) => setForm({ ...form, note: e.target.value })}
+                />
               </div>
             </div>
             <div className="toolbar" style={{ justifyContent: "space-between", marginTop: 20 }}>
-              <button type="button" className="btn btn-soft" onClick={() => setForm(null)}>Cancelar</button>
+              <button type="button" className="btn btn-soft" onClick={() => setForm(null)}>
+                Cancelar
+              </button>
               <div className="toolbar" style={{ gap: 8 }}>
                 {!form.id && (
                   <button type="button" className="btn btn-soft" disabled={busy} onClick={() => save(null, true)}>
                     Guardar y añadir otro
                   </button>
                 )}
-                <button className="btn btn-primary" disabled={busy}>{busy ? "Guardando…" : "Guardar"}</button>
+                <button className="btn btn-primary" disabled={busy}>
+                  {busy ? "Guardando…" : "Guardar"}
+                </button>
               </div>
             </div>
           </form>

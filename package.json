@@ -6,7 +6,12 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write \"{app,components,lib,test}/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"{app,components,lib,test}/**/*.{ts,tsx}\""
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
@@ -31,7 +36,9 @@
     "@types/react-dom": "^19.0.4",
     "eslint": "^9.22.0",
     "eslint-config-next": "15.2.4",
-    "typescript": "^5.8.2"
+    "prettier": "^3.9.6",
+    "typescript": "^5.8.2",
+    "vitest": "^5.0.0"
   },
   "description": "Gestión financiera compartida para parejas, PWA desplegable en Vercel",
   "engines": {

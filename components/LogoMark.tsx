@@ -22,7 +22,10 @@ export default function LogoMark() {
       <path d="M72 76c0-8 6-14 14-14s14 6 14 14" stroke="#b47a12" strokeWidth="4" fill="none" strokeLinecap="round" />
       <path d="M72 92c0-6 4-10 10-10h16c6 0 10 4 10 10s-4 10-10 10h-16c-6 0-10-4-10-10z" fill="#ea9f2f" />
       <path d="M76 106c0-4 3-7 7-7h26c4 0 7 3 7 7v4c0 4-3 7-7 7h-26c-4 0-7-3-7-7v-4z" fill="#fff3c0" opacity="0.7" />
-      <path d="M78 120c0-4 2-7 5-9 3-2 7-3 12-3h24c5 0 9 1 12 3 3 2 5 5 5 9 0 8-7 14-15 14h-18c-8 0-15-6-15-14z" fill="#d39724" />
+      <path
+        d="M78 120c0-4 2-7 5-9 3-2 7-3 12-3h24c5 0 9 1 12 3 3 2 5 5 5 9 0 8-7 14-15 14h-18c-8 0-15-6-15-14z"
+        fill="#d39724"
+      />
     </svg>
   );
 }

@@ -17,8 +17,12 @@ const DashboardCharts = dynamic(() => import("./DashboardCharts"), {
   ),
 });
 
-const DashboardChartsLoader: FC<{ byCategory: ByCategory; byDay: ByDay; hideAmounts?: boolean; from?: string; to?: string }> = (props) => (
-  <DashboardCharts {...props} />
-);
+const DashboardChartsLoader: FC<{
+  byCategory: ByCategory;
+  byDay: ByDay;
+  hideAmounts?: boolean;
+  from?: string;
+  to?: string;
+}> = (props) => <DashboardCharts {...props} />;
 
 export default DashboardChartsLoader;

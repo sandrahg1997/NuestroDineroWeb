@@ -1,16 +1,6 @@
 "use client";
 
-import {
-  Area,
-  AreaChart,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Area, AreaChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { categoryColor, transactionsHref } from "@/lib/utils";
@@ -36,7 +26,12 @@ export default function DashboardCharts({
     transactionsHref({ type: "expense", category: categoryId, from, to });
 
   const tooltipStyle = {
-    contentStyle: { background: chart.tooltipBg, border: `1px solid ${chart.tooltipBorder}`, borderRadius: 12, color: chart.tooltipText },
+    contentStyle: {
+      background: chart.tooltipBg,
+      border: `1px solid ${chart.tooltipBorder}`,
+      borderRadius: 12,
+      color: chart.tooltipText,
+    },
     labelStyle: { color: chart.tooltipText },
     itemStyle: { color: chart.tooltipText },
   };
@@ -69,12 +64,17 @@ export default function DashboardCharts({
                       router.push(categoryHref(categoryId));
                     }}
                   >
-                    {byCategory.map((entry) => <Cell key={entry.name} fill={categoryColor(entry.name)} />)}
+                    {byCategory.map((entry) => (
+                      <Cell key={entry.name} fill={categoryColor(entry.name)} />
+                    ))}
                   </Pie>
                   {!hideAmounts && <Tooltip {...tooltipStyle} formatter={(value: number) => `${value.toFixed(2)} €`} />}
                 </PieChart>
               </ResponsiveContainer>
-              <div className="donut-label"><strong>{byCategory.length}</strong><span>categorías</span></div>
+              <div className="donut-label">
+                <strong>{byCategory.length}</strong>
+                <span>categorías</span>
+              </div>
             </div>
             <div className="category-legend">
               {byCategory.map((item) => (
@@ -86,7 +86,9 @@ export default function DashboardCharts({
               ))}
             </div>
           </div>
-        ) : <div className="empty">Sin gastos en este periodo.</div>}
+        ) : (
+          <div className="empty">Sin gastos en este periodo.</div>
+        )}
       </article>
 
       <article className="card chart-card">
@@ -113,13 +115,36 @@ export default function DashboardCharts({
                 <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: chart.axis, fontSize: 12 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: chart.axis, fontSize: 12 }} />
                 {!hideAmounts && <Tooltip {...tooltipStyle} formatter={(value: number) => `${value.toFixed(2)} €`} />}
-                <Area type="monotone" dataKey="expense" name="Gastos" stroke="#ec4899" strokeWidth={3} fill="url(#expenseFill)" />
-                <Area type="monotone" dataKey="income" name="Ingresos" stroke="#10b981" strokeWidth={3} fill="url(#incomeFill)" />
+                <Area
+                  type="monotone"
+                  dataKey="expense"
+                  name="Gastos"
+                  stroke="#ec4899"
+                  strokeWidth={3}
+                  fill="url(#expenseFill)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="income"
+                  name="Ingresos"
+                  stroke="#10b981"
+                  strokeWidth={3}
+                  fill="url(#incomeFill)"
+                />
               </AreaChart>
             </ResponsiveContainer>
-          ) : <div className="empty">Todavía no hay movimientos suficientes.</div>}
+          ) : (
+            <div className="empty">Todavía no hay movimientos suficientes.</div>
+          )}
         </div>
-        <div className="chart-caption"><span><i className="chart-key expense-key" /> Gastos</span><span><i className="chart-key income-key" /> Ingresos</span></div>
+        <div className="chart-caption">
+          <span>
+            <i className="chart-key expense-key" /> Gastos
+          </span>
+          <span>
+            <i className="chart-key income-key" /> Ingresos
+          </span>
+        </div>
       </article>
     </section>
   );

@@ -81,7 +81,9 @@ export default function DashboardRange({
         Hasta
         <input name="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
       </label>
-      <SubmitButton className="btn btn-soft" pendingText="Aplicando…">Aplicar</SubmitButton>
+      <SubmitButton className="btn btn-soft" pendingText="Aplicando…">
+        Aplicar
+      </SubmitButton>
     </form>
   );
 }

@@ -34,7 +34,12 @@ export default function ThemeToggle() {
 
   const Icon = ICON[mode];
   return (
-    <button type="button" className="privacy-toggle" onClick={cycle} aria-label={`Cambiar tema. Actual: ${LABEL[mode]}`}>
+    <button
+      type="button"
+      className="privacy-toggle"
+      onClick={cycle}
+      aria-label={`Cambiar tema. Actual: ${LABEL[mode]}`}
+    >
       <Icon size={19} />
       {LABEL[mode]}
     </button>

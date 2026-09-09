@@ -5,6 +5,7 @@ import type { FC } from "react";
 import type { Category } from "@/lib/types";
 
 type Row = { date: string; amount: number; type: "expense" | "income"; category_id: string | null };
+type PeriodRow = { id: string; name: string; start_date: string; end_date: string };
 
 const HistoricoCharts = dynamic(() => import("./HistoricoCharts"), {
   ssr: false,
@@ -15,8 +16,11 @@ const HistoricoCharts = dynamic(() => import("./HistoricoCharts"), {
   ),
 });
 
-const HistoricoChartsLoader: FC<{ transactions: Row[]; categories: Category[]; hideAmounts?: boolean }> = (props) => (
-  <HistoricoCharts {...props} />
-);
+const HistoricoChartsLoader: FC<{
+  transactions: Row[];
+  categories: Category[];
+  periods: PeriodRow[];
+  hideAmounts?: boolean;
+}> = (props) => <HistoricoCharts {...props} />;
 
 export default HistoricoChartsLoader;

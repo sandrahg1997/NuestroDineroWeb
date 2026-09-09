@@ -2,153 +2,197 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import Money from "@/components/Money";
 import type { Category } from "@/lib/types";
-import { categoryColor, dateKey, monthLabel, monthRange, nextMonthKey, prevMonthKey, transactionsHref } from "@/lib/utils";
+import { categoryColor, dateKey, transactionsHref } from "@/lib/utils";
 import { useChartTheme } from "@/lib/useChartTheme";
 import { ArrowDownRight, ArrowUpRight, CalendarRange, Minus, ReceiptText, Sparkles } from "lucide-react";
 
 type Row = { date: string; amount: number; type: "expense" | "income"; category_id: string | null };
-type MonthPoint = { month: string; label: string; expense: number; income: number; forecast: boolean };
+type PeriodRow = { id: string; name: string; start_date: string; end_date: string };
+type PeriodPoint = { id: string; label: string; expense: number; income: number };
 type CmpBasis = "prev" | "avg3" | "year";
 type CmpView = "all" | "cuts" | "ups";
 
-const FORECAST_MONTHS = 3;
-const FORECAST_SAMPLE = 3;
 const NO_CATEGORY = "__none__";
-const TREND_MONTHS = 6;
+const TREND_PERIODS = 6;
+const FORECAST_SAMPLE = 3;
+const MAX_BARS = 12;
 
-function lastDayOfMonth(key: string) {
-  const [y, m] = key.split("-").map(Number);
-  return new Date(y, m, 0).getDate();
+function daysBetween(a: string, b: string) {
+  return Math.round((Date.parse(`${b}T00:00:00`) - Date.parse(`${a}T00:00:00`)) / 86400000);
+}
+function addDays(iso: string, n: number) {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
 }
 
 export default function HistoricoCharts({
   transactions,
   categories,
+  periods,
   hideAmounts,
 }: {
   transactions: Row[];
   categories: Category[];
+  periods: PeriodRow[];
   hideAmounts?: boolean;
 }) {
   const [categoryId, setCategoryId] = useState("");
   const chart = useChartTheme();
+
+  // Periodos ordenados por fecha de inicio (ascendente).
+  const orderedPeriods = useMemo(
+    () => [...periods].sort((a, b) => a.start_date.localeCompare(b.start_date)),
+    [periods]
+  );
 
   const filtered = useMemo(
     () => (categoryId ? transactions.filter((t) => t.category_id === categoryId) : transactions),
     [transactions, categoryId]
   );
 
-  const { monthly, totalExpense, totalIncome, avgExpense, monthsTracked, forecastExpense, forecastIncome } = useMemo(() => {
-    if (!filtered.length) {
-      return { monthly: [] as MonthPoint[], totalExpense: 0, totalIncome: 0, avgExpense: 0, monthsTracked: 0, forecastExpense: 0, forecastIncome: 0 };
-    }
-    const byMonth = new Map<string, { expense: number; income: number }>();
-    let minMonth = filtered[0].date.slice(0, 7);
-    let maxMonth = minMonth;
-    for (const t of filtered) {
-      const key = t.date.slice(0, 7);
-      if (key < minMonth) minMonth = key;
-      if (key > maxMonth) maxMonth = key;
-      const entry = byMonth.get(key) ?? { expense: 0, income: 0 };
-      if (t.type === "expense") entry.expense += Number(t.amount);
-      else entry.income += Number(t.amount);
-      byMonth.set(key, entry);
-    }
-    const currentMonth = dateKey().slice(0, 7);
-    if (currentMonth > maxMonth) maxMonth = currentMonth;
-    const months = monthRange(minMonth, maxMonth);
-    const actual: MonthPoint[] = months.map((key) => ({ month: key, label: monthLabel(key), forecast: false, ...(byMonth.get(key) ?? { expense: 0, income: 0 }) }));
+  // ─── Evolución: una barra por periodo ─────────────────────────────────────
+  const { evolution, totalExpense, totalIncome, avgExpense, forecastExpense } = useMemo(() => {
+    const actual: PeriodPoint[] = orderedPeriods.map((p) => {
+      let expense = 0;
+      let income = 0;
+      for (const t of filtered) {
+        if (t.date >= p.start_date && t.date <= p.end_date) {
+          if (t.type === "expense") expense += Number(t.amount);
+          else income += Number(t.amount);
+        }
+      }
+      return { id: p.id, label: p.name, expense, income };
+    });
 
-    const totalExpense = actual.reduce((total, m) => total + m.expense, 0);
-    const totalIncome = actual.reduce((total, m) => total + m.income, 0);
-    const monthsTracked = actual.length;
-    const avgExpense = monthsTracked ? totalExpense / monthsTracked : 0;
+    const totalExpense = actual.reduce((s, p) => s + p.expense, 0);
+    const totalIncome = actual.reduce((s, p) => s + p.income, 0);
+    const avgExpense = actual.length ? totalExpense / actual.length : 0;
 
-    // Previsión: media de los últimos meses reales, proyectada hacia adelante.
     const sample = actual.slice(-FORECAST_SAMPLE);
-    const forecastExpense = sample.length ? sample.reduce((t, m) => t + m.expense, 0) / sample.length : 0;
-    const forecastIncome = sample.length ? sample.reduce((t, m) => t + m.income, 0) / sample.length : 0;
+    const forecastExpense = sample.length ? sample.reduce((s, p) => s + p.expense, 0) / sample.length : 0;
 
-    let cursor = maxMonth;
-    const forecastPoints: MonthPoint[] = [];
-    for (let i = 0; i < FORECAST_MONTHS; i++) {
-      cursor = nextMonthKey(cursor);
-      forecastPoints.push({ month: cursor, label: monthLabel(cursor), forecast: true, expense: forecastExpense, income: forecastIncome });
-    }
+    return { evolution: actual, totalExpense, totalIncome, avgExpense, forecastExpense };
+  }, [orderedPeriods, filtered]);
 
-    return { monthly: [...actual, ...forecastPoints], totalExpense, totalIncome, avgExpense, monthsTracked, forecastExpense, forecastIncome };
-  }, [filtered]);
+  const periodsTracked = evolution.length;
+  const evolutionChart = evolution.slice(-MAX_BARS);
 
-  const firstForecastLabel = monthly.find((m) => m.forecast)?.label;
-
-  // ─── Comparativa de gasto por categoría entre meses ────────────────────────
+  // ─── Comparativa de gasto por categoría entre periodos ────────────────────
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
 
-  const expenseByMonth = useMemo(() => {
-    // month (YYYY-MM) -> (categoryId -> total gastado)
+  // periodId -> (categoryId -> total gastado)
+  const expenseByPeriod = useMemo(() => {
     const map = new Map<string, Map<string, number>>();
-    for (const t of transactions) {
-      if (t.type !== "expense") continue;
-      const mk = t.date.slice(0, 7);
-      const cat = t.category_id ?? NO_CATEGORY;
-      let inner = map.get(mk);
-      if (!inner) { inner = new Map(); map.set(mk, inner); }
-      inner.set(cat, (inner.get(cat) ?? 0) + Number(t.amount));
+    for (const p of orderedPeriods) {
+      const inner = new Map<string, number>();
+      for (const t of transactions) {
+        if (t.type !== "expense") continue;
+        if (t.date < p.start_date || t.date > p.end_date) continue;
+        const cat = t.category_id ?? NO_CATEGORY;
+        inner.set(cat, (inner.get(cat) ?? 0) + Number(t.amount));
+      }
+      map.set(p.id, inner);
     }
     return map;
-  }, [transactions]);
+  }, [orderedPeriods, transactions]);
 
-  const availableMonths = useMemo(() => [...expenseByMonth.keys()].sort(), [expenseByMonth]);
-
-  const [cmpMonth, setCmpMonth] = useState("");
+  const [cmpPeriodId, setCmpPeriodId] = useState("");
   const [cmpBasis, setCmpBasis] = useState<CmpBasis>("prev");
   const [cmpView, setCmpView] = useState<CmpView>("all");
 
-  const currentMonthKey = dateKey().slice(0, 7);
-  const refMonth = cmpMonth || availableMonths[availableMonths.length - 1] || currentMonthKey;
-  const monthInProgress = refMonth >= currentMonthKey;
+  // Periodo de referencia: el elegido, o el último con gasto, o el último.
+  const defaultRefId = useMemo(() => {
+    for (let i = orderedPeriods.length - 1; i >= 0; i--) {
+      const m = expenseByPeriod.get(orderedPeriods[i].id);
+      if (m && m.size) return orderedPeriods[i].id;
+    }
+    return orderedPeriods[orderedPeriods.length - 1]?.id ?? "";
+  }, [orderedPeriods, expenseByPeriod]);
+
+  const refId = cmpPeriodId || defaultRefId;
+  const refIndex = orderedPeriods.findIndex((p) => p.id === refId);
+  const refPeriod = refIndex >= 0 ? orderedPeriods[refIndex] : undefined;
+
+  const todayKey = dateKey();
+  const periodInProgress = !!refPeriod && todayKey >= refPeriod.start_date && todayKey <= refPeriod.end_date;
 
   const comparison = useMemo(() => {
-    const current = expenseByMonth.get(refMonth) ?? new Map<string, number>();
+    const empty = {
+      rows: [] as {
+        cat: string;
+        name: string;
+        icon: string;
+        now: number;
+        before: number;
+        delta: number;
+        pct: number;
+        trend: number[];
+        tag: "new" | "gone" | null;
+      }[],
+      maxAbsDelta: 1,
+      cut: 0,
+      up: 0,
+      nowTotal: 0,
+      beforeTotal: 0,
+      cutCount: 0,
+      upCount: 0,
+      trendCount: 0,
+      hasBaseData: false,
+      baseLabel: "",
+    };
+    if (refIndex < 0) return empty;
 
-    // Meses que forman la base de comparación.
-    let baseMonths: string[];
-    if (cmpBasis === "prev") baseMonths = [prevMonthKey(refMonth)];
-    else if (cmpBasis === "year") {
-      const [y, m] = refMonth.split("-");
-      baseMonths = [`${Number(y) - 1}-${m}`];
+    const current = expenseByPeriod.get(refId) ?? new Map<string, number>();
+
+    // Periodos que forman la base de comparación.
+    let basePeriods: PeriodRow[];
+    if (cmpBasis === "prev") {
+      basePeriods = refIndex > 0 ? [orderedPeriods[refIndex - 1]] : [];
+    } else if (cmpBasis === "avg3") {
+      basePeriods = orderedPeriods.slice(Math.max(0, refIndex - 3), refIndex);
     } else {
-      let k = refMonth;
-      baseMonths = [];
-      for (let i = 0; i < 3; i++) { k = prevMonthKey(k); baseMonths.push(k); }
+      // "year": el periodo cuyo inicio cae más cerca de un año antes (±60 días).
+      const target = addDays(orderedPeriods[refIndex].start_date, -365);
+      let best: PeriodRow | undefined;
+      let bestDist = Infinity;
+      for (let i = 0; i < refIndex; i++) {
+        const dist = Math.abs(daysBetween(target, orderedPeriods[i].start_date));
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = orderedPeriods[i];
+        }
+      }
+      basePeriods = best && bestDist <= 60 ? [best] : [];
     }
-    const baseMaps = baseMonths.map((k) => expenseByMonth.get(k)).filter(Boolean) as Map<string, number>[];
-    const baseDivisor = cmpBasis === "avg3" ? 3 : 1;
+
+    const baseMaps = basePeriods.map((p) => expenseByPeriod.get(p.id)).filter(Boolean) as Map<string, number>[];
+    const baseDivisor = cmpBasis === "avg3" ? Math.max(1, basePeriods.length) : 1;
     const baseFor = (cat: string) => baseMaps.reduce((s, mm) => s + (mm.get(cat) ?? 0), 0) / baseDivisor;
 
-    // Meses para la mini-tendencia (los TREND_MONTHS que terminan en refMonth).
-    const trendMonths: string[] = [];
-    let tk = refMonth;
-    for (let i = 0; i < TREND_MONTHS; i++) { trendMonths.unshift(tk); tk = prevMonthKey(tk); }
+    // Periodos para la mini-tendencia (los que terminan en el de referencia).
+    const trendPeriods = orderedPeriods.slice(Math.max(0, refIndex - (TREND_PERIODS - 1)), refIndex + 1);
 
     const catIds = new Set<string>(current.keys());
     for (const mm of baseMaps) for (const c of mm.keys()) catIds.add(c);
 
-    const rows = [...catIds].map((cat) => {
-      const name = cat === NO_CATEGORY ? "Sin categoría" : catMap.get(cat)?.name ?? "Categoría eliminada";
-      const icon = cat === NO_CATEGORY ? "•" : catMap.get(cat)?.icon ?? "•";
-      const now = current.get(cat) ?? 0;
-      const before = baseFor(cat);
-      const delta = now - before;
-      const pct = before > 0 ? (delta / before) * 100 : now > 0 ? 100 : 0;
-      const trend = trendMonths.map((mk) => expenseByMonth.get(mk)?.get(cat) ?? 0);
-      const tag: "new" | "gone" | null =
-        before > 0 && now < 0.005 ? "gone" : before < 0.005 && now > 0 ? "new" : null;
-      return { cat, name, icon, now, before, delta, pct, trend, tag };
-    }).filter((r) => r.now > 0 || r.before > 0);
+    const rows = [...catIds]
+      .map((cat) => {
+        const name = cat === NO_CATEGORY ? "Sin categoría" : (catMap.get(cat)?.name ?? "Categoría eliminada");
+        const icon = cat === NO_CATEGORY ? "•" : (catMap.get(cat)?.icon ?? "•");
+        const now = current.get(cat) ?? 0;
+        const before = baseFor(cat);
+        const delta = now - before;
+        const pct = before > 0 ? (delta / before) * 100 : now > 0 ? 100 : 0;
+        const trend = trendPeriods.map((p) => expenseByPeriod.get(p.id)?.get(cat) ?? 0);
+        const tag: "new" | "gone" | null =
+          before > 0 && now < 0.005 ? "gone" : before < 0.005 && now > 0 ? "new" : null;
+        return { cat, name, icon, now, before, delta, pct, trend, tag };
+      })
+      .filter((r) => r.now > 0 || r.before > 0);
 
     rows.sort((a, b) => a.delta - b.delta); // recortes primero (delta más negativo arriba)
 
@@ -161,59 +205,119 @@ export default function HistoricoCharts({
     const upCount = rows.filter((r) => r.delta > 0.005).length;
 
     const hasBaseData = baseMaps.length > 0;
-    const baseLabel = cmpBasis === "avg3" ? "media de los 3 meses previos" : monthLabel(baseMonths[0]);
+    const baseLabel =
+      cmpBasis === "avg3"
+        ? `media de ${basePeriods.length} periodo${basePeriods.length === 1 ? "" : "s"} previo${basePeriods.length === 1 ? "" : "s"}`
+        : (basePeriods[0]?.name ?? "el periodo anterior");
 
-    return { rows, maxAbsDelta, cut, up, nowTotal, beforeTotal, cutCount, upCount, hasBaseData, baseLabel };
-  }, [expenseByMonth, refMonth, cmpBasis, catMap]);
+    return {
+      rows,
+      maxAbsDelta,
+      cut,
+      up,
+      nowTotal,
+      beforeTotal,
+      cutCount,
+      upCount,
+      trendCount: trendPeriods.length,
+      hasBaseData,
+      baseLabel,
+    };
+  }, [expenseByPeriod, orderedPeriods, refId, refIndex, cmpBasis, catMap]);
 
   const netDelta = comparison.nowTotal - comparison.beforeTotal;
-  const monthFrom = `${refMonth}-01`;
-  const monthTo = `${refMonth}-${String(lastDayOfMonth(refMonth)).padStart(2, "0")}`;
   const rowHref = (cat: string) =>
-    transactionsHref({ type: "expense", category: cat === NO_CATEGORY ? null : cat, from: monthFrom, to: monthTo });
+    transactionsHref({
+      type: "expense",
+      category: cat === NO_CATEGORY ? null : cat,
+      from: refPeriod?.start_date,
+      to: refPeriod?.end_date,
+    });
 
   const visibleRows = comparison.rows.filter((r) =>
     cmpView === "cuts" ? r.delta < -0.005 : cmpView === "ups" ? r.delta > 0.005 : true
   );
 
+  const axisLabel = (v: string) => (v.length > 12 ? `${v.slice(0, 11)}…` : v);
+
+  if (!orderedPeriods.length) {
+    return (
+      <article className="card chart-card">
+        <div className="empty">
+          <span className="empty-icon">
+            <CalendarRange size={22} />
+          </span>
+          <strong>Sin periodos todavía</strong>
+          <p>El histórico se agrupa por periodos. Crea al menos uno para empezar a ver tu evolución.</p>
+          <Link href="/periods" className="btn btn-primary">
+            Crear un periodo
+          </Link>
+        </div>
+      </article>
+    );
+  }
+
   return (
     <>
       <div className="toolbar" style={{ marginBottom: 16 }}>
-        <select className="select" style={{ maxWidth: 260 }} value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+        <select
+          className="select"
+          style={{ maxWidth: 260 }}
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
+        >
           <option value="">Todas las categorías</option>
           {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+            <option key={c.id} value={c.id}>
+              {c.icon} {c.name}
+            </option>
           ))}
         </select>
       </div>
 
       <section className="dashboard-metrics" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
         <article className="dashboard-metric-card">
-          <div className="metric-icon metric-icon-expense"><ReceiptText size={20} /></div>
+          <div className="metric-icon metric-icon-expense">
+            <ReceiptText size={20} />
+          </div>
           <div>
             <p className="metric-label">Gastado en total</p>
-            <p className="dashboard-metric-value"><Money value={totalExpense} /></p>
+            <p className="dashboard-metric-value">
+              <Money value={totalExpense} />
+            </p>
           </div>
         </article>
         <article className="dashboard-metric-card">
-          <div className="metric-icon metric-icon-income"><ArrowUpRight size={20} /></div>
+          <div className="metric-icon metric-icon-income">
+            <ArrowUpRight size={20} />
+          </div>
           <div>
             <p className="metric-label">Ingresado en total</p>
-            <p className="dashboard-metric-value"><Money value={totalIncome} /></p>
+            <p className="dashboard-metric-value">
+              <Money value={totalIncome} />
+            </p>
           </div>
         </article>
         <article className="dashboard-metric-card">
-          <div className="metric-icon metric-icon-saving"><CalendarRange size={20} /></div>
+          <div className="metric-icon metric-icon-saving">
+            <CalendarRange size={20} />
+          </div>
           <div>
-            <p className="metric-label">Promedio mensual de gasto</p>
-            <p className="dashboard-metric-value"><Money value={avgExpense} /></p>
+            <p className="metric-label">Promedio por periodo</p>
+            <p className="dashboard-metric-value">
+              <Money value={avgExpense} />
+            </p>
           </div>
         </article>
         <article className="dashboard-metric-card">
-          <div className="metric-icon metric-icon-saving"><Sparkles size={20} /></div>
+          <div className="metric-icon metric-icon-saving">
+            <Sparkles size={20} />
+          </div>
           <div>
-            <p className="metric-label">Previsión próximo mes</p>
-            <p className="dashboard-metric-value"><Money value={forecastExpense} /></p>
+            <p className="metric-label">Previsión próximo periodo</p>
+            <p className="dashboard-metric-value">
+              <Money value={forecastExpense} />
+            </p>
           </div>
         </article>
       </section>
@@ -221,39 +325,65 @@ export default function HistoricoCharts({
       <article className="card chart-card">
         <div className="section-head dashboard-section-head">
           <div>
-            <span className="eyebrow">{monthsTracked} mes{monthsTracked === 1 ? "" : "es"} registrados</span>
-            <h2>Evolución mensual</h2>
+            <span className="eyebrow">
+              {periodsTracked} periodo{periodsTracked === 1 ? "" : "s"} registrados
+            </span>
+            <h2>Evolución por periodo</h2>
           </div>
         </div>
         <div className="area-chart-wrap">
-          {monthly.length ? (
+          {evolutionChart.length ? (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthly} margin={{ top: 10, right: 6, left: -18, bottom: 0 }}>
-                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: chart.axis, fontSize: 12 }} />
+              <BarChart data={evolutionChart} margin={{ top: 10, right: 6, left: -18, bottom: 0 }}>
+                <XAxis
+                  dataKey="label"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: chart.axis, fontSize: 12 }}
+                  tickFormatter={axisLabel}
+                />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: chart.axis, fontSize: 12 }} />
                 {!hideAmounts && (
                   <Tooltip
-                    contentStyle={{ background: chart.tooltipBg, border: `1px solid ${chart.tooltipBorder}`, borderRadius: 12, color: chart.tooltipText }}
+                    contentStyle={{
+                      background: chart.tooltipBg,
+                      border: `1px solid ${chart.tooltipBorder}`,
+                      borderRadius: 12,
+                      color: chart.tooltipText,
+                    }}
                     labelStyle={{ color: chart.tooltipText }}
                     itemStyle={{ color: chart.tooltipText }}
-                    formatter={(value: number, name: string, item: any) => [`${value.toFixed(2)} €`, item?.payload?.forecast ? `${name} (previsión)` : name]}
+                    formatter={(value: number, name: string) => [`${value.toFixed(2)} €`, name]}
                   />
                 )}
-                {firstForecastLabel && <ReferenceLine x={firstForecastLabel} stroke={chart.grid} strokeDasharray="4 4" />}
                 <Bar dataKey="expense" name="Gastos" radius={[6, 6, 0, 0]}>
-                  {monthly.map((m) => <Cell key={`e-${m.month}`} fill="#ec4899" fillOpacity={m.forecast ? 0.35 : 1} />)}
+                  {evolutionChart.map((p) => (
+                    <Cell key={`e-${p.id}`} fill="#ec4899" />
+                  ))}
                 </Bar>
                 <Bar dataKey="income" name="Ingresos" radius={[6, 6, 0, 0]}>
-                  {monthly.map((m) => <Cell key={`i-${m.month}`} fill="#10b981" fillOpacity={m.forecast ? 0.35 : 1} />)}
+                  {evolutionChart.map((p) => (
+                    <Cell key={`i-${p.id}`} fill="#10b981" />
+                  ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          ) : <div className="empty">Todavía no hay movimientos.</div>}
+          ) : (
+            <div className="empty">Todavía no hay movimientos en tus periodos.</div>
+          )}
         </div>
         <div className="chart-caption">
-          <span><i className="chart-key expense-key" /> Gastos</span>
-          <span><i className="chart-key income-key" /> Ingresos</span>
-          {firstForecastLabel && <span>Barras claras desde {firstForecastLabel}: previsión basada en la media de los últimos {Math.min(FORECAST_SAMPLE, monthsTracked)} meses.</span>}
+          <span>
+            <i className="chart-key expense-key" /> Gastos
+          </span>
+          <span>
+            <i className="chart-key income-key" /> Ingresos
+          </span>
+          {periodsTracked > MAX_BARS && (
+            <span>
+              Mostrando los últimos {MAX_BARS} de {periodsTracked} periodos.
+            </span>
+          )}
         </div>
       </article>
 
@@ -268,24 +398,26 @@ export default function HistoricoCharts({
         <div className="toolbar" style={{ marginBottom: 12 }}>
           <select
             className="select"
-            style={{ maxWidth: 200 }}
-            value={refMonth}
-            onChange={(e) => setCmpMonth(e.target.value)}
+            style={{ maxWidth: 220 }}
+            value={refId}
+            onChange={(e) => setCmpPeriodId(e.target.value)}
           >
-            {(availableMonths.length ? availableMonths : [refMonth]).slice().reverse().map((m) => (
-              <option key={m} value={m}>{monthLabel(m)}</option>
+            {[...orderedPeriods].reverse().map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
             ))}
           </select>
           <span style={{ color: "var(--muted)", fontSize: 13, fontWeight: 650 }}>comparado con</span>
           <select
             className="select"
-            style={{ maxWidth: 220 }}
+            style={{ maxWidth: 240 }}
             value={cmpBasis}
             onChange={(e) => setCmpBasis(e.target.value as CmpBasis)}
           >
-            <option value="prev">Mes anterior</option>
-            <option value="avg3">Media de los 3 meses previos</option>
-            <option value="year">Mismo mes del año pasado</option>
+            <option value="prev">Periodo anterior</option>
+            <option value="avg3">Media de los 3 periodos previos</option>
+            <option value="year">Mismo periodo del año pasado</option>
           </select>
         </div>
 
@@ -304,24 +436,31 @@ export default function HistoricoCharts({
         )}
 
         {!comparison.hasBaseData ? (
-          <div className="empty">No hay datos del periodo de comparación ({comparison.baseLabel}).</div>
+          <div className="empty">No hay un periodo de comparación disponible ({comparison.baseLabel}).</div>
         ) : !comparison.rows.length ? (
-          <div className="empty">Sin gastos que comparar en estos meses.</div>
+          <div className="empty">Sin gastos que comparar en estos periodos.</div>
         ) : (
           <>
-            {monthInProgress && (
+            {periodInProgress && (
               <div className="filter-summary" style={{ marginBottom: 12 }}>
-                <span>⚠ {monthLabel(refMonth)} aún está en curso: la comparación es parcial y casi todo aparecerá como recorte.</span>
+                <span>
+                  ⚠ {refPeriod?.name} aún está en curso: la comparación es parcial y casi todo aparecerá como recorte.
+                </span>
               </div>
             )}
 
             <div className="filter-summary" style={{ marginBottom: 14 }}>
-              <span>Recortado: <strong className="income amount-value">−{comparison.cut.toFixed(0)} €</strong></span>
-              <span>Aumentado: <strong className="expense amount-value">+{comparison.up.toFixed(0)} €</strong></span>
+              <span>
+                Recortado: <strong className="income amount-value">−{comparison.cut.toFixed(0)} €</strong>
+              </span>
+              <span>
+                Aumentado: <strong className="expense amount-value">+{comparison.up.toFixed(0)} €</strong>
+              </span>
               <span>
                 Neto:{" "}
                 <strong className={`amount-value ${netDelta <= 0 ? "income" : "expense"}`}>
-                  {netDelta > 0 ? "+" : netDelta < 0 ? "−" : ""}{Math.abs(netDelta).toFixed(0)} €
+                  {netDelta > 0 ? "+" : netDelta < 0 ? "−" : ""}
+                  {Math.abs(netDelta).toFixed(0)} €
                 </strong>
               </span>
             </div>
@@ -338,7 +477,9 @@ export default function HistoricoCharts({
                       <div className="cmp-row-main">
                         <div className="cmp-name">
                           <span className="legend-dot" style={{ background: categoryColor(r.name) }} />
-                          <span className="cmp-label">{r.icon} {r.name}</span>
+                          <span className="cmp-label">
+                            {r.icon} {r.name}
+                          </span>
                           {r.tag === "gone" && <span className="cmp-tag gone">ya no gastas</span>}
                           {r.tag === "new" && <span className="cmp-tag new">nuevo</span>}
                         </div>
@@ -357,10 +498,14 @@ export default function HistoricoCharts({
                         <div className={`cmp-delta ${dir}`}>
                           <DirIcon size={14} />
                           <span className="amount-value">
-                            {r.delta > 0 ? "+" : r.delta < 0 ? "−" : ""}{Math.abs(r.delta).toFixed(0)} €
+                            {r.delta > 0 ? "+" : r.delta < 0 ? "−" : ""}
+                            {Math.abs(r.delta).toFixed(0)} €
                           </span>
                           {r.before > 0 && dir !== "flat" && (
-                            <span className="cmp-pct">({r.pct > 0 ? "+" : ""}{r.pct.toFixed(0)}%)</span>
+                            <span className="cmp-pct">
+                              ({r.pct > 0 ? "+" : ""}
+                              {r.pct.toFixed(0)}%)
+                            </span>
                           )}
                         </div>
                       </div>
@@ -378,7 +523,10 @@ export default function HistoricoCharts({
             )}
 
             <div className="chart-caption" style={{ marginTop: 12 }}>
-              <span>Ordenado por mayor recorte · barra clara = tendencia últimos {TREND_MONTHS} meses · pulsa una fila para ver sus movimientos.</span>
+              <span>
+                Ordenado por mayor recorte · barra clara = tendencia últimos {comparison.trendCount} periodos · pulsa
+                una fila para ver sus movimientos.
+              </span>
             </div>
           </>
         )}

@@ -11,7 +11,12 @@ type PeriodTransaction = {
   category: { name?: string } | null;
 };
 
-type BudgetRow = { id: string; amount: number | string; category_id: string | null; category?: { name?: string; icon?: string } | null };
+type BudgetRow = {
+  id: string;
+  amount: number | string;
+  category_id: string | null;
+  category?: { name?: string; icon?: string } | null;
+};
 
 export type PeriodSummary = {
   rows: PeriodTransaction[];
@@ -25,7 +30,15 @@ export type PeriodSummary = {
   budgetTotal: number;
   budgetSpent: number;
   budgetPercentage: number;
-  budgets: { id: string; name: string; icon?: string; amount: number; spent: number; percentage: number; categoryId: string | null }[];
+  budgets: {
+    id: string;
+    name: string;
+    icon?: string;
+    amount: number;
+    spent: number;
+    percentage: number;
+    categoryId: string | null;
+  }[];
 };
 
 export async function computePeriodSummary(
@@ -85,7 +98,7 @@ export async function computePeriodSummary(
     .sort((a, b) => b.value - a.value);
   const budgetTotal = budgetRows.reduce((total, b) => total + Number(b.amount), 0);
   const budgetSpent = budgetRows.reduce(
-    (total, b) => total + (b.category_id ? categorySpendById.get(b.category_id) ?? 0 : expense),
+    (total, b) => total + (b.category_id ? (categorySpendById.get(b.category_id) ?? 0) : expense),
     0
   );
   const budgetPercentage = budgetTotal > 0 ? Math.round((budgetSpent / budgetTotal) * 100) : 0;
@@ -94,7 +107,7 @@ export async function computePeriodSummary(
 
   const budgets = budgetRows.map((b) => {
     const amount = Number(b.amount);
-    const spent = b.category_id ? categorySpendById.get(b.category_id) ?? 0 : expense;
+    const spent = b.category_id ? (categorySpendById.get(b.category_id) ?? 0) : expense;
     return {
       id: b.id,
       name: b.category?.name ?? "Presupuesto general",

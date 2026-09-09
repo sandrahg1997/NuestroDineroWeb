@@ -6,7 +6,15 @@ import Money from "@/components/Money";
 import PageHeader from "@/components/PageHeader";
 import { getSessionContext } from "@/lib/data";
 import { computePeriodSummary } from "@/lib/period-summary";
-import { categoryColor, dateKey, defaultPeriodName, monthKey, relativeDayLabel, savingsTier, transactionsHref } from "@/lib/utils";
+import {
+  categoryColor,
+  dateKey,
+  defaultPeriodName,
+  monthKey,
+  relativeDayLabel,
+  savingsTier,
+  transactionsHref,
+} from "@/lib/utils";
 import { ArrowDownRight, ArrowUpRight, PiggyBank, Plus, ReceiptText, Sparkles, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -78,8 +86,13 @@ export default async function Dashboard() {
       .lte("date", previousEnd),
   ]);
 
-  const previousExpenseRows = ((previousTx ?? []) as unknown as { amount: number | string; type: "expense" | "income"; category: { name?: string } | null }[])
-    .filter((item) => item.type === "expense");
+  const previousExpenseRows = (
+    (previousTx ?? []) as unknown as {
+      amount: number | string;
+      type: "expense" | "income";
+      category: { name?: string } | null;
+    }[]
+  ).filter((item) => item.type === "expense");
   const previousExpense = previousExpenseRows.reduce((total, item) => total + Number(item.amount), 0);
   const previousCategoryMap = new Map<string, number>();
   for (const item of previousExpenseRows) {
@@ -87,9 +100,14 @@ export default async function Dashboard() {
     previousCategoryMap.set(name, (previousCategoryMap.get(name) ?? 0) + Number(item.amount));
   }
 
-  const { rows, expense, income, balance, savingsRate, categoryData, byDay, topCategory, budgetTotal, budgets } = summary;
+  const { rows, expense, income, balance, savingsRate, categoryData, byDay, topCategory, budgetTotal, budgets } =
+    summary;
   const expenseChange = percentChange(expense, previousExpense);
-  const firstName = user.user_metadata?.display_name?.split(" ")[0] || user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0] || "equipo";
+  const firstName =
+    user.user_metadata?.display_name?.split(" ")[0] ||
+    user.user_metadata?.full_name?.split(" ")[0] ||
+    user.email?.split("@")[0] ||
+    "equipo";
   const savings = savingsTier(savingsRate);
 
   const transactionsLink = (type?: "expense" | "income", categoryId?: string | null) =>
@@ -104,10 +122,18 @@ export default async function Dashboard() {
       ? {
           icon: "🏆",
           title: topCategory.name,
-          text: <>Es tu categoría con más gasto: <Money value={topCategory.value} />.</>,
+          text: (
+            <>
+              Es tu categoría con más gasto: <Money value={topCategory.value} />.
+            </>
+          ),
           href: transactionsLink("expense", topCategory.categoryId),
         }
-      : { icon: "🌱", title: "Tu panel está listo", text: "Añade movimientos y empezaremos a encontrar patrones útiles." },
+      : {
+          icon: "🌱",
+          title: "Tu panel está listo",
+          text: "Añade movimientos y empezaremos a encontrar patrones útiles.",
+        },
   ];
 
   if (periodInProgress) {
@@ -115,7 +141,10 @@ export default async function Dashboard() {
     insights.push({
       icon: "📅",
       title: daysLeft === 0 ? "Último día" : `${daysLeft} días restantes`,
-      text: daysLeft === 0 ? `Hoy se cierra "${periodLabel}".` : `Quedan ${daysLeft} días para que termine "${periodLabel}".`,
+      text:
+        daysLeft === 0
+          ? `Hoy se cierra "${periodLabel}".`
+          : `Quedan ${daysLeft} días para que termine "${periodLabel}".`,
     });
 
     const daysElapsed = Math.max(1, Math.round((today.getTime() - rangeStart.getTime()) / 86400000) + 1);
@@ -126,11 +155,19 @@ export default async function Dashboard() {
             icon: "🔮",
             title: <Money value={projectedTotal} />,
             text:
-              projectedTotal > budgetTotal
-                ? <>Al ritmo actual, cerrarás <Money value={projectedTotal - budgetTotal} /> por encima de tu presupuesto.</>
-                : "Al ritmo actual, cerrarás el periodo dentro de tu presupuesto.",
+              projectedTotal > budgetTotal ? (
+                <>
+                  Al ritmo actual, cerrarás <Money value={projectedTotal - budgetTotal} /> por encima de tu presupuesto.
+                </>
+              ) : (
+                "Al ritmo actual, cerrarás el periodo dentro de tu presupuesto."
+              ),
           }
-        : { icon: "🔮", title: <Money value={projectedTotal} />, text: "Es tu gasto estimado si mantienes el ritmo actual hasta el final del periodo." }
+        : {
+            icon: "🔮",
+            title: <Money value={projectedTotal} />,
+            text: "Es tu gasto estimado si mantienes el ritmo actual hasta el final del periodo.",
+          }
     );
   }
 
@@ -147,46 +184,63 @@ export default async function Dashboard() {
     insights.push({
       icon: "📈",
       title: growthCategory,
-      text: <>Has gastado <Money value={growthAmount} /> más que en el periodo anterior en esta categoría.</>,
+      text: (
+        <>
+          Has gastado <Money value={growthAmount} /> más que en el periodo anterior en esta categoría.
+        </>
+      ),
     });
   }
 
   return (
     <AppShell households={households} hideAmounts={hideAmounts}>
-      <PageHeader
-        title={`Hola, ${firstName} 👋`}
-        subtitle={periodLabel}
-      />
+      <PageHeader title={`Hola, ${firstName} 👋`} subtitle={periodLabel} />
 
       <section className="dashboard-hero">
         <div className="hero-copy">
-          <div className="hero-kicker"><Sparkles size={15} /> Tu periodo, de un vistazo</div>
+          <div className="hero-kicker">
+            <Sparkles size={15} /> Tu periodo, de un vistazo
+          </div>
           <div className="dashboard-range-inline">
             <DashboardRange action={saveDashboardRange} from={selectedStart} to={selectedEnd} />
           </div>
           <p className="hero-label">Balance disponible</p>
-          <h1 className={balance >= 0 ? "hero-balance positive" : "hero-balance negative"}><Money value={balance} strong /></h1>
+          <h1 className={balance >= 0 ? "hero-balance positive" : "hero-balance negative"}>
+            <Money value={balance} strong />
+          </h1>
           <div className="hero-trend">
             {expenseChange <= 0 ? <ArrowDownRight size={17} /> : <ArrowUpRight size={17} />}
-            <span>{Math.abs(Math.round(expenseChange))}% de gasto {expenseChange <= 0 ? "menos" : "más"} que el periodo anterior</span>
+            <span>
+              {Math.abs(Math.round(expenseChange))}% de gasto {expenseChange <= 0 ? "menos" : "más"} que el periodo
+              anterior
+            </span>
           </div>
         </div>
-        <div className="hero-orb" aria-hidden="true"><WalletCards size={54} />
+        <div className="hero-orb" aria-hidden="true">
+          <WalletCards size={54} />
         </div>
         <div className="hero-glow hero-glow-one" />
         <div className="hero-glow hero-glow-two" />
       </section>
 
       <div className="hero-add-row">
-        <Link href="/transactions?new=expense"><button className="btn btn-primary hero-add" aria-label="Añadir gasto"><Plus size={14}/> Añadir gasto</button></Link>
+        <Link href="/transactions?new=expense">
+          <button className="btn btn-primary hero-add" aria-label="Añadir gasto">
+            <Plus size={14} /> Añadir gasto
+          </button>
+        </Link>
       </div>
 
       <section className="dashboard-metrics">
         <Link href={transactionsLink("expense")} className="dashboard-metric-card">
-          <div className="metric-icon metric-icon-expense"><ReceiptText size={20} /></div>
+          <div className="metric-icon metric-icon-expense">
+            <ReceiptText size={20} />
+          </div>
           <div>
             <p className="metric-label">Gastado este periodo</p>
-            <p className="dashboard-metric-value"><Money value={expense} /></p>
+            <p className="dashboard-metric-value">
+              <Money value={expense} />
+            </p>
           </div>
           <span className={`metric-badge ${expenseChange <= 0 ? "good" : "warn"}`}>
             {expenseChange <= 0 ? "↓" : "↑"} {Math.abs(Math.round(expenseChange))}%
@@ -194,16 +248,22 @@ export default async function Dashboard() {
         </Link>
 
         <Link href={transactionsLink("income")} className="dashboard-metric-card">
-          <div className="metric-icon metric-icon-income"><ArrowUpRight size={20} /></div>
+          <div className="metric-icon metric-icon-income">
+            <ArrowUpRight size={20} />
+          </div>
           <div>
             <p className="metric-label">Ingresos</p>
-            <p className="dashboard-metric-value"><Money value={income} /></p>
+            <p className="dashboard-metric-value">
+              <Money value={income} />
+            </p>
           </div>
           <span className="metric-badge good">Este periodo</span>
         </Link>
 
         <article className="dashboard-metric-card">
-          <div className="metric-icon metric-icon-saving"><PiggyBank size={20} /></div>
+          <div className="metric-icon metric-icon-saving">
+            <PiggyBank size={20} />
+          </div>
           <div>
             <p className="metric-label">Tasa de ahorro</p>
             <p className="dashboard-metric-value">{savingsRate}%</p>
@@ -220,13 +280,12 @@ export default async function Dashboard() {
           {budgets.length > 0 ? (
             <div className="budget-list">
               {budgets.map((b) => (
-                <Link
-                  href={transactionsLink("expense", b.categoryId)}
-                  className="budget-item"
-                  key={b.id}
-                >
+                <Link href={transactionsLink("expense", b.categoryId)} className="budget-item" key={b.id}>
                   <div className="budget-item-head">
-                    <span className="budget-item-name">{b.icon ? `${b.icon} ` : ""}{b.name}</span>
+                    <span className="budget-item-name">
+                      {b.icon ? `${b.icon} ` : ""}
+                      {b.name}
+                    </span>
                     <strong>{b.percentage}%</strong>
                   </div>
                   <div className="budget-track">
@@ -237,9 +296,15 @@ export default async function Dashboard() {
                   </div>
                   <p className="budget-caption">
                     <Money value={b.spent} /> de <Money value={b.amount} /> ·{" "}
-                    {b.amount - b.spent >= 0
-                      ? <>te quedan <Money value={b.amount - b.spent} /></>
-                      : <>superado en <Money value={b.spent - b.amount} /></>}
+                    {b.amount - b.spent >= 0 ? (
+                      <>
+                        te quedan <Money value={b.amount - b.spent} />
+                      </>
+                    ) : (
+                      <>
+                        superado en <Money value={b.spent - b.amount} />
+                      </>
+                    )}
                   </p>
                 </Link>
               ))}
@@ -252,14 +317,22 @@ export default async function Dashboard() {
         <InsightCarousel insights={insights} />
       </section>
 
-      <DashboardChartsLoader byCategory={categoryData} byDay={byDay} hideAmounts={hideAmounts} from={selectedStart} to={selectedEnd} />
+      <DashboardChartsLoader
+        byCategory={categoryData}
+        byDay={byDay}
+        hideAmounts={hideAmounts}
+        from={selectedStart}
+        to={selectedEnd}
+      />
 
       <div className="section-head recent-head">
         <div>
           <span className="eyebrow">Actividad reciente</span>
           <h2>Últimos movimientos</h2>
         </div>
-        <Link href="/transactions" className="btn btn-soft">Ver todos</Link>
+        <Link href="/transactions" className="btn btn-soft">
+          Ver todos
+        </Link>
       </div>
 
       <div className="card recent-card">
@@ -276,20 +349,27 @@ export default async function Dashboard() {
               </div>
               <div className="recent-main">
                 <strong>{row.concept}</strong>
-                <span>{categoryName} · {relativeDayLabel(row.date)}</span>
+                <span>
+                  {categoryName} · {relativeDayLabel(row.date)}
+                </span>
               </div>
               <strong className={row.type === "expense" ? "expense" : "income"}>
-                {row.type === "expense" ? "−" : "+"}<Money value={Number(row.amount)} />
+                {row.type === "expense" ? "−" : "+"}
+                <Money value={Number(row.amount)} />
               </strong>
             </div>
           );
         })}
         {!rows.length && (
           <div className="empty">
-            <span className="empty-icon"><ReceiptText size={22} /></span>
+            <span className="empty-icon">
+              <ReceiptText size={22} />
+            </span>
             <strong>Tu panel está en blanco</strong>
             <p>Añade el primer gasto o ingreso y empezaremos a mostrarte gráficos y patrones.</p>
-            <Link href="/transactions?new=expense" className="btn btn-primary"><Plus size={16} /> Añadir movimiento</Link>
+            <Link href="/transactions?new=expense" className="btn btn-primary">
+              <Plus size={16} /> Añadir movimiento
+            </Link>
           </div>
         )}
       </div>

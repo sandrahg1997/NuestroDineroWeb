@@ -5,7 +5,22 @@ import type { HouseholdOption } from "@/lib/data";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
-import { LayoutDashboard, ReceiptText, Tags, Repeat2, PiggyBank, ScanLine, CalendarRange, History, Settings, Plus, MoreHorizontal, Users, Eye, EyeOff } from "lucide-react";
+import {
+  LayoutDashboard,
+  ReceiptText,
+  Tags,
+  Repeat2,
+  PiggyBank,
+  ScanLine,
+  CalendarRange,
+  History,
+  Settings,
+  Plus,
+  MoreHorizontal,
+  Users,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import WhatsNewModal from "./WhatsNewModal";
 import { useToast } from "./Toast";
 import ThemeToggle from "./ThemeToggle";
@@ -19,7 +34,7 @@ const items = [
   ["/budgets", PiggyBank, "Presupuestos"],
   ["/periods", CalendarRange, "Periodos"],
   ["/historico", History, "Histórico"],
-  ["/settings", Settings, "Ajustes"]
+  ["/settings", Settings, "Ajustes"],
 ] as const;
 
 function householdLabel(h: HouseholdOption) {
@@ -27,7 +42,15 @@ function householdLabel(h: HouseholdOption) {
   return h.name;
 }
 
-export default function AppShell({ children, households = [], hideAmounts = false }: { children: ReactNode; households?: HouseholdOption[]; hideAmounts?: boolean }) {
+export default function AppShell({
+  children,
+  households = [],
+  hideAmounts = false,
+}: {
+  children: ReactNode;
+  households?: HouseholdOption[];
+  hideAmounts?: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
@@ -68,7 +91,12 @@ export default function AppShell({ children, households = [], hideAmounts = fals
 
   const privacyLabel = hidden ? "Mostrar importes" : "Ocultar importes";
   const privacyButton = (
-    <button type="button" className={`privacy-toggle ${hidden ? "active" : ""}`} onClick={toggleHideAmounts} aria-pressed={hidden}>
+    <button
+      type="button"
+      className={`privacy-toggle ${hidden ? "active" : ""}`}
+      onClick={toggleHideAmounts}
+      aria-pressed={hidden}
+    >
       {hidden ? <EyeOff size={19} /> : <Eye size={19} />}
       {privacyLabel}
     </button>
@@ -101,7 +129,9 @@ export default function AppShell({ children, households = [], hideAmounts = fals
       <main className="main">
         {households.length > 1 && (
           <div className={`household-switcher ${switching ? "is-switching" : ""}`}>
-            <span className="household-switcher-icon"><Users size={13} /></span>
+            <span className="household-switcher-icon">
+              <Users size={13} />
+            </span>
             <select
               value={households.find((h) => h.is_active)?.household_id ?? households[0]?.household_id}
               onChange={handleSwitch}
@@ -109,7 +139,9 @@ export default function AppShell({ children, households = [], hideAmounts = fals
               aria-label="Cambiar de espacio"
             >
               {households.map((h) => (
-                <option key={h.household_id} value={h.household_id}>{householdLabel(h)}</option>
+                <option key={h.household_id} value={h.household_id}>
+                  {householdLabel(h)}
+                </option>
               ))}
             </select>
           </div>
@@ -148,7 +180,12 @@ export default function AppShell({ children, households = [], hideAmounts = fals
             {privacyButton}
             <ThemeToggle />
             {secondary.map(([href, Icon, label]) => (
-              <Link href={href} key={href} onClick={() => setMore(false)} className={pathname.startsWith(href) ? "active" : ""}>
+              <Link
+                href={href}
+                key={href}
+                onClick={() => setMore(false)}
+                className={pathname.startsWith(href) ? "active" : ""}
+              >
                 <Icon size={18} />
                 {label}
               </Link>
