@@ -8,11 +8,20 @@ export type ChangelogEntry = {
 // `version` debe ser único y ordenable (usamos fecha YYYY-MM-DD); `date` es el texto que se muestra.
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-09-29",
+    date: "29 de septiembre de 2026",
+    items: [
+      "Nuevo: en Recurrentes, un resumen con el gasto e ingreso recurrente mensual (normalizando semanales y anuales a su equivalente al mes) y cuántos tienes activos.",
+      "Nuevo: en Inicio, un dato destacado con lo que tienes comprometido al mes en gastos recurrentes activos.",
+    ],
+  },
+  {
     version: "2026-09-09",
     date: "9 de septiembre de 2026",
     items: [
       "Nuevo: en Histórico, comparativa de gasto por categoría entre periodos. Elige un periodo y compáralo con el anterior, con la media de los 3 previos o con el mismo periodo del año pasado; la lista se ordena por mayor recorte, marca categorías nuevas o abandonadas, muestra la mini-tendencia de los últimos periodos y puedes filtrar solo recortes o solo subidas. Pulsa cualquier fila para ver sus movimientos.",
       "Mejora: el Histórico ahora se agrupa por tus periodos (con su nombre) en lugar de por meses naturales, para que cuadre con periodos de nómina a nómina o de cualquier duración.",
+      'Mejora: al añadir un movimiento, "Guardar y añadir otro" para meter varios seguidos, la categoría se sugiere sola a partir del comercio, y accesos rápidos a tus categorías más usadas.',
       "Mejora: gráficas y tooltips se adaptan al tema claro/oscuro, y la app carga notablemente más rápido al navegar entre pantallas.",
     ],
   },

@@ -1,4 +1,13 @@
+import type { Frequency } from "./types";
+
 export const eur = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
+
+// Para sumar frecuencias distintas hace falta un equivalente mensual: la
+// semanal se multiplica por 52/12 y la anual se divide entre 12.
+export const MONTHLY_FACTOR: Record<Frequency, number> = { weekly: 52 / 12, monthly: 1, yearly: 1 / 12 };
+export function monthlyEquivalent(amount: number, frequency: Frequency) {
+  return amount * MONTHLY_FACTOR[frequency];
+}
 export function monthKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
 }

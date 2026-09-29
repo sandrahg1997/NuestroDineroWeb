@@ -1,12 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Category, Frequency, RecurringTransaction, TransactionType } from "@/lib/types";
-import { LoaderCircle, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ArrowUpRight, LoaderCircle, Pencil, Plus, ReceiptText, Repeat2, Trash2, X } from "lucide-react";
 import Money from "@/components/Money";
-import { dateKey } from "@/lib/utils";
+import { dateKey, monthlyEquivalent } from "@/lib/utils";
 import { useToast } from "./Toast";
 import MoneyInput from "./MoneyInput";
+
 type F = {
   id?: string;
   concept: string;
@@ -43,6 +44,19 @@ export default function RecurringManager({
   const [saving, setSaving] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const totals = useMemo(() => {
+    const active = rows.filter((r) => r.is_active);
+    const monthlyOf = (list: RecurringTransaction[]) =>
+      list.reduce((sum, r) => sum + monthlyEquivalent(Number(r.amount), r.frequency), 0);
+    return {
+      monthlyExpense: monthlyOf(active.filter((r) => r.type === "expense")),
+      monthlyIncome: monthlyOf(active.filter((r) => r.type === "income")),
+      activeCount: active.length,
+      pausedCount: rows.length - active.length,
+    };
+  }, [rows]);
+
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!form) return;
@@ -109,6 +123,54 @@ export default function RecurringManager({
   }
   return (
     <>
+      {rows.length > 0 && (
+        <>
+          <section
+            className="dashboard-metrics"
+            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", marginBottom: 4 }}
+          >
+            <article className="dashboard-metric-card">
+              <div className="metric-icon metric-icon-expense">
+                <ReceiptText size={20} />
+              </div>
+              <div>
+                <p className="metric-label">Gasto recurrente mensual</p>
+                <p className="dashboard-metric-value">
+                  <Money value={totals.monthlyExpense} />
+                </p>
+              </div>
+            </article>
+            <article className="dashboard-metric-card">
+              <div className="metric-icon metric-icon-income">
+                <ArrowUpRight size={20} />
+              </div>
+              <div>
+                <p className="metric-label">Ingreso recurrente mensual</p>
+                <p className="dashboard-metric-value">
+                  <Money value={totals.monthlyIncome} />
+                </p>
+              </div>
+            </article>
+            <article className="dashboard-metric-card">
+              <div className="metric-icon metric-icon-saving">
+                <Repeat2 size={20} />
+              </div>
+              <div>
+                <p className="metric-label">Recurrentes activos</p>
+                <p className="dashboard-metric-value">{totals.activeCount}</p>
+              </div>
+            </article>
+          </section>
+          <p className="subtitle" style={{ margin: "10px 0 18px" }}>
+            Solo cuenta lo <strong>activo</strong> (
+            {totals.pausedCount > 0
+              ? `${totals.pausedCount} pausado${totals.pausedCount === 1 ? "" : "s"}`
+              : "nada pausado"}
+            ). Los importes semanales y anuales se normalizan a su equivalente mensual para poder sumarlos.
+          </p>
+        </>
+      )}
+
       <div className="toolbar" style={{ justifyContent: "flex-end", marginBottom: 14 }}>
         <button className="btn btn-primary" onClick={() => setForm({ ...blank })}>
           <Plus size={16} />

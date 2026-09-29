@@ -6,11 +6,13 @@ import Money from "@/components/Money";
 import PageHeader from "@/components/PageHeader";
 import { getSessionContext } from "@/lib/data";
 import { computePeriodSummary } from "@/lib/period-summary";
+import type { Frequency } from "@/lib/types";
 import {
   categoryColor,
   dateKey,
   defaultPeriodName,
   monthKey,
+  monthlyEquivalent,
   relativeDayLabel,
   savingsTier,
   transactionsHref,
@@ -76,7 +78,7 @@ export default async function Dashboard() {
   const previousStart = previousStartDate.toISOString().slice(0, 10);
   const previousEnd = previousEndDate.toISOString().slice(0, 10);
 
-  const [summary, { data: previousTx }] = await Promise.all([
+  const [summary, { data: previousTx }, { data: activeRecurring }] = await Promise.all([
     computePeriodSummary(supabase, householdId, selectedStart, selectedEnd, periodId),
     supabase
       .from("transactions")
@@ -84,7 +86,18 @@ export default async function Dashboard() {
       .eq("household_id", householdId)
       .gte("date", previousStart)
       .lte("date", previousEnd),
+    supabase
+      .from("recurring_transactions")
+      .select("amount,frequency")
+      .eq("household_id", householdId)
+      .eq("type", "expense")
+      .eq("is_active", true),
   ]);
+
+  const fixedMonthly = ((activeRecurring ?? []) as { amount: number | string; frequency: Frequency }[]).reduce(
+    (total, r) => total + monthlyEquivalent(Number(r.amount), r.frequency),
+    0
+  );
 
   const previousExpenseRows = (
     (previousTx ?? []) as unknown as {
@@ -135,6 +148,15 @@ export default async function Dashboard() {
           text: "Añade movimientos y empezaremos a encontrar patrones útiles.",
         },
   ];
+
+  if (fixedMonthly > 0) {
+    insights.push({
+      icon: "📌",
+      title: <Money value={fixedMonthly} />,
+      text: "Es lo que tienes comprometido al mes en gastos recurrentes activos (hipoteca, suscripciones…).",
+      href: "/recurring",
+    });
+  }
 
   if (periodInProgress) {
     const daysLeft = Math.max(0, Math.round((rangeEnd.getTime() - today.getTime()) / 86400000));
