@@ -74,7 +74,10 @@ export default function NotificationSettings({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(sub.toJSON()),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "No se pudo activar.");
+      if (!res.ok) {
+        const message = (await res.json().catch(() => null))?.error;
+        throw new Error(message ?? `No se pudo activar (error ${res.status} del servidor).`);
+      }
       setSubscribed(true);
       toast("Notificaciones activadas en este dispositivo", "success");
     } catch (err) {

@@ -23,6 +23,14 @@ export async function POST(request: Request) {
   const parsed = subscriptionSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Suscripción no válida" }, { status: 400 });
 
+  // Sin la service_role el cliente admin lanza una excepción y la respuesta sería
+  // un 500 sin explicación: mejor decir qué falta.
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY)
+    return NextResponse.json(
+      { error: "Falta la variable SUPABASE_SERVICE_ROLE_KEY en el servidor (Vercel)." },
+      { status: 500 }
+    );
+
   const { endpoint, keys } = parsed.data;
   const admin = createAdminClient();
   const { error } = await admin.from("push_subscriptions").upsert(
@@ -35,7 +43,10 @@ export async function POST(request: Request) {
     },
     { onConflict: "endpoint" }
   );
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[push/subscribe]", error.message);
+    return NextResponse.json({ error: `No se pudo guardar la suscripción: ${error.message}` }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }
 
