@@ -8,6 +8,16 @@ export type ChangelogEntry = {
 // `version` debe ser único y ordenable (usamos fecha YYYY-MM-DD); `date` es el texto que se muestra.
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-10-02",
+    date: "2 de octubre de 2026",
+    items: [
+      "Nuevo: notificaciones en el móvil. Actívalas en Ajustes y te avisaremos cuando tu pareja añada un gasto o ingreso («Nacho ha añadido un gasto de 60 € en Mercadona») y cada domingo con el informe de la semana: lo gastado frente a la semana anterior, dónde más, cómo va el presupuesto y vuestros retos. En iPhone, instala antes la app en la pantalla de inicio.",
+      "Nuevo: previsión de cierre en Inicio. Cuenta tu balance actual, los recurrentes que aún faltan por llegar y tu ritmo de gasto del día a día para decirte con cuánto terminaréis el periodo.",
+      "Nuevo: Reunión del mes. Un resumen para revisar el periodo juntos: qué fue bien, dónde os pasasteis, hasta tres propuestas concretas y un espacio para apuntar vuestros acuerdos, que veréis en la siguiente reunión.",
+      "Nuevo: Retos en pareja. Semana sin comida a domicilio, fin de semana de gasto cero, café en casa… o uno a vuestra medida. La app sigue vuestra racha de días limpios y estima lo que estáis ahorrando.",
+    ],
+  },
+  {
     version: "2026-09-29",
     date: "29 de septiembre de 2026",
     items: [

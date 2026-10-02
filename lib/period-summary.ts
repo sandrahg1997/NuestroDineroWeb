@@ -8,6 +8,7 @@ type PeriodTransaction = {
   concept: string;
   merchant?: string;
   category_id: string | null;
+  recurring_id?: string | null;
   category: { name?: string } | null;
 };
 
@@ -51,7 +52,7 @@ export async function computePeriodSummary(
   const [{ data: tx }, { data: budgetData }] = await Promise.all([
     supabase
       .from("transactions")
-      .select("id,type,amount,date,concept,merchant,category_id,category:categories(name)")
+      .select("id,type,amount,date,concept,merchant,category_id,recurring_id,category:categories(name)")
       .eq("household_id", householdId)
       .gte("date", start)
       .lte("date", end)

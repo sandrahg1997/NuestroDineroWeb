@@ -4,7 +4,7 @@ import { createWorker } from "tesseract.js";
 import { createClient } from "@/lib/supabase/client";
 import type { Category } from "@/lib/types";
 import { merchantSuggestions, parseReceipt } from "@/lib/receipt";
-import { dateKey } from "@/lib/utils";
+import { dateKey, notifyPartnerActivity } from "@/lib/utils";
 import { Camera, LoaderCircle, Save } from "lucide-react";
 import { useToast } from "./Toast";
 import MoneyInput from "./MoneyInput";
@@ -64,22 +64,27 @@ export default function ScanReceipt({
     if (!amount) return toast("Revisa el importe antes de guardar.", "error");
     setSaving(true);
     const s = createClient();
-    const { error } = await s.from("transactions").insert({
-      household_id: householdId,
-      user_id: userId,
-      concept: merchant || "Compra",
-      merchant,
-      amount: Number(amount.replace(",", ".")),
-      date,
-      category_id: categoryId || null,
-      type: "expense",
-      note: "Ticket escaneado",
-      receipt_text: text,
-    });
+    const { data: created, error } = await s
+      .from("transactions")
+      .insert({
+        household_id: householdId,
+        user_id: userId,
+        concept: merchant || "Compra",
+        merchant,
+        amount: Number(amount.replace(",", ".")),
+        date,
+        category_id: categoryId || null,
+        type: "expense",
+        note: "Ticket escaneado",
+        receipt_text: text,
+      })
+      .select("id")
+      .single();
     if (error) {
       toast(error.message, "error");
       setSaving(false);
     } else {
+      if (created) notifyPartnerActivity(created.id);
       if (merchant.trim() && categoryId)
         await s
           .from("merchant_category_rules")

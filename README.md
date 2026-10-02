@@ -17,6 +17,10 @@ Aplicación web responsive para gastos e ingresos compartidos. Está hecha con *
 - Aprendizaje de la categoría elegida para cada comercio.
 - Exportación e importación de movimientos en Excel (.xlsx).
 - PWA instalable en iPhone/Android con accesos rápidos a “Añadir gasto” y “Escanear ticket”.
+- Notificaciones push: actividad de la pareja e informe semanal (domingo por la tarde).
+- Previsión de cierre del periodo en Inicio (recurrentes pendientes + ritmo de gasto).
+- Reunión del mes: revisión del periodo en pareja con propuestas y acuerdos guardados.
+- Retos en pareja con racha y ahorro estimado.
 
 ## 1. Crear Supabase
 
@@ -102,3 +106,17 @@ Una web no puede instalar un WidgetKit nativo de iOS. La PWA sí ofrece:
 - Accesos directos a añadir gasto y escanear ticket cuando la plataforma los admite.
 
 Para un widget nativo real habría que conservar una pequeña extensión iOS conectada a esta misma base de datos.
+
+## Notificaciones push
+
+1. Ejecuta `supabase/migrations/2026-10-02-push-reunion-retos.sql` en el SQL Editor (crea también las tablas de la Reunión del mes y de Retos).
+2. Genera las claves VAPID **una sola vez**:
+
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+
+3. Pon en `.env.local` y en Vercel `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` (un `mailto:` tuyo). Si más adelante cambias las claves, cada dispositivo tendrá que volver a activar los avisos.
+4. Cada persona activa los avisos en **Ajustes > Notificaciones** en cada dispositivo. En iPhone (iOS 16.4 o superior) solo funciona con la app instalada en la pantalla de inicio.
+
+El informe semanal lo lanza el cron de Vercel `/api/cron/weekly-report` (domingos a las 18:00 UTC, es decir, a las 20:00 en verano y a las 19:00 en invierno en España), protegido con el mismo `CRON_SECRET` que el de recurrentes.

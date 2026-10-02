@@ -20,6 +20,8 @@ import {
   Users,
   Eye,
   EyeOff,
+  Handshake,
+  Trophy,
 } from "lucide-react";
 import WhatsNewModal from "./WhatsNewModal";
 import { useToast } from "./Toast";
@@ -34,6 +36,8 @@ const items = [
   ["/budgets", PiggyBank, "Presupuestos"],
   ["/periods", CalendarRange, "Periodos"],
   ["/historico", History, "Histórico"],
+  ["/reunion", Handshake, "Reunión"],
+  ["/retos", Trophy, "Retos"],
   ["/settings", Settings, "Ajustes"],
 ] as const;
 

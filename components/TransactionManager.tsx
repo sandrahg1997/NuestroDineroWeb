@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Category, Transaction, TransactionType } from "@/lib/types";
 import Money from "@/components/Money";
-import { dateKey } from "@/lib/utils";
+import { dateKey, notifyPartnerActivity } from "@/lib/utils";
 import { merchantSuggestions } from "@/lib/receipt";
 import { Inbox, LoaderCircle, MoreVertical, Pencil, Plus, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -278,6 +278,7 @@ export default function TransactionManager({
     }
 
     if (!error && data) {
+      if (!form.id) notifyPartnerActivity(data.id);
       if (form.merchant.trim() && form.category_id) {
         await s.from("merchant_category_rules").upsert(
           {

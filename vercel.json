@@ -1,5 +1,6 @@
 {
   "crons": [
-    { "path": "/api/cron/recurring", "schedule": "0 5 * * *" }
+    { "path": "/api/cron/recurring", "schedule": "0 5 * * *" },
+    { "path": "/api/cron/weekly-report", "schedule": "0 18 * * 0" }
   ]
 }

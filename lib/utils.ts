@@ -117,3 +117,14 @@ export function defaultPeriodName(start: string, end: string) {
   }
   return `${formatDateEs(start)} – ${formatDateEs(end)}`;
 }
+
+// Avisa a la pareja de un movimiento recién creado (push). No bloquea ni falla:
+// `keepalive` deja que la petición termine aunque se navegue a otra página.
+export function notifyPartnerActivity(transactionId: string) {
+  fetch("/api/push/activity", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ transactionId }),
+    keepalive: true,
+  }).catch(() => {});
+}

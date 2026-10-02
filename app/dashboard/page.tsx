@@ -4,7 +4,9 @@ import DashboardRange from "@/components/DashboardRange";
 import InsightCarousel, { type Insight } from "@/components/InsightCarousel";
 import Money from "@/components/Money";
 import PageHeader from "@/components/PageHeader";
+import { challengeProgress, type Challenge } from "@/lib/challenges";
 import { getSessionContext } from "@/lib/data";
+import { computeForecast } from "@/lib/forecast";
 import { computePeriodSummary } from "@/lib/period-summary";
 import type { Frequency } from "@/lib/types";
 import {
@@ -78,31 +80,46 @@ export default async function Dashboard() {
   const previousStart = previousStartDate.toISOString().slice(0, 10);
   const previousEnd = previousEndDate.toISOString().slice(0, 10);
 
-  const [summary, { data: previousTx }, { data: activeRecurring }] = await Promise.all([
+  const todayKey = dateKey();
+  const [summary, { data: previousTx }, { data: activeRecurring }, { data: activeChallenges }] = await Promise.all([
     computePeriodSummary(supabase, householdId, selectedStart, selectedEnd, periodId),
     supabase
       .from("transactions")
-      .select("amount,type,category:categories(name)")
+      .select("amount,type,recurring_id,category:categories(name)")
       .eq("household_id", householdId)
       .gte("date", previousStart)
       .lte("date", previousEnd),
     supabase
       .from("recurring_transactions")
-      .select("amount,frequency")
+      .select("type,amount,frequency,next_date")
       .eq("household_id", householdId)
-      .eq("type", "expense")
       .eq("is_active", true),
+    // Si la tabla de retos aún no existe (migración sin aplicar) viene vacío.
+    supabase
+      .from("challenges")
+      .select("*")
+      .eq("household_id", householdId)
+      .lte("start_date", todayKey)
+      .gte("end_date", todayKey)
+      .order("end_date")
+      .limit(1),
   ]);
 
-  const fixedMonthly = ((activeRecurring ?? []) as { amount: number | string; frequency: Frequency }[]).reduce(
-    (total, r) => total + monthlyEquivalent(Number(r.amount), r.frequency),
-    0
-  );
+  const recurringRows = (activeRecurring ?? []) as {
+    type: "expense" | "income";
+    amount: number | string;
+    frequency: Frequency;
+    next_date: string;
+  }[];
+  const fixedMonthly = recurringRows
+    .filter((r) => r.type === "expense")
+    .reduce((total, r) => total + monthlyEquivalent(Number(r.amount), r.frequency), 0);
 
   const previousExpenseRows = (
     (previousTx ?? []) as unknown as {
       amount: number | string;
       type: "expense" | "income";
+      recurring_id: string | null;
       category: { name?: string } | null;
     }[]
   ).filter((item) => item.type === "expense");
@@ -126,11 +143,60 @@ export default async function Dashboard() {
   const transactionsLink = (type?: "expense" | "income", categoryId?: string | null) =>
     transactionsHref({ type, category: categoryId, from: selectedStart, to: selectedEnd });
 
-  const todayKey = dateKey();
   const today = new Date(`${todayKey}T12:00:00`);
   const periodInProgress = todayKey >= selectedStart && todayKey <= selectedEnd;
+  const daysLeft = Math.max(0, Math.round((rangeEnd.getTime() - today.getTime()) / 86400000));
 
-  const insights: Insight[] = [
+  const forecast = periodInProgress
+    ? computeForecast({
+        today: todayKey,
+        start: selectedStart,
+        end: selectedEnd,
+        rows,
+        recurring: recurringRows,
+        previousDailyVariable:
+          previousExpenseRows.length > 0
+            ? previousExpenseRows.filter((r) => !r.recurring_id).reduce((t, r) => t + Number(r.amount), 0) / rangeDays
+            : undefined,
+      })
+    : null;
+
+  const challenge = ((activeChallenges ?? []) as Challenge[])[0];
+  let challengeInsight: Insight | null = null;
+  if (challenge) {
+    const { data: challengeTx } = await supabase
+      .from("transactions")
+      .select("type,amount,date,concept,merchant,category_id,recurring_id")
+      .eq("household_id", householdId)
+      .eq("type", "expense")
+      .gte("date", challenge.start_date)
+      .lte("date", todayKey);
+    const progress = challengeProgress(challenge, (challengeTx ?? []) as any, todayKey);
+    challengeInsight = {
+      icon: challenge.icon,
+      title: challenge.title,
+      text:
+        progress.status === "broken"
+          ? "Este reto se ha roto. ¡No pasa nada, probad otro!"
+          : `${progress.cleanStreak} ${progress.cleanStreak === 1 ? "día" : "días"} limpios · quedan ${progress.daysLeft} ${progress.daysLeft === 1 ? "día" : "días"}.`,
+      href: "/retos",
+    };
+  }
+
+  const insights: Insight[] = [];
+
+  // Periodo cerrado o a punto de cerrarse: toca revisarlo juntos.
+  if (activePeriod && (!periodInProgress || daysLeft <= 2) && todayKey >= selectedStart) {
+    insights.push({
+      icon: "🤝",
+      title: "Toca la reunión del mes",
+      text: `Revisad juntos "${periodLabel}": qué fue bien, dónde os pasasteis y qué acordáis para el siguiente.`,
+      href: `/reunion?period=${activePeriod.id}`,
+    });
+  }
+  if (challengeInsight) insights.push(challengeInsight);
+
+  insights.push(
     topCategory
       ? {
           icon: "🏆",
@@ -146,8 +212,8 @@ export default async function Dashboard() {
           icon: "🌱",
           title: "Tu panel está listo",
           text: "Añade movimientos y empezaremos a encontrar patrones útiles.",
-        },
-  ];
+        }
+  );
 
   if (fixedMonthly > 0) {
     insights.push({
@@ -159,7 +225,6 @@ export default async function Dashboard() {
   }
 
   if (periodInProgress) {
-    const daysLeft = Math.max(0, Math.round((rangeEnd.getTime() - today.getTime()) / 86400000));
     insights.push({
       icon: "📅",
       title: daysLeft === 0 ? "Último día" : `${daysLeft} días restantes`,
@@ -168,9 +233,10 @@ export default async function Dashboard() {
           ? `Hoy se cierra "${periodLabel}".`
           : `Quedan ${daysLeft} días para que termine "${periodLabel}".`,
     });
+  }
 
-    const daysElapsed = Math.max(1, Math.round((today.getTime() - rangeStart.getTime()) / 86400000) + 1);
-    const projectedTotal = (expense / daysElapsed) * rangeDays;
+  if (forecast) {
+    const projectedTotal = forecast.projectedExpense;
     insights.push(
       budgetTotal > 0
         ? {
@@ -182,13 +248,13 @@ export default async function Dashboard() {
                   Al ritmo actual, cerrarás <Money value={projectedTotal - budgetTotal} /> por encima de tu presupuesto.
                 </>
               ) : (
-                "Al ritmo actual, cerrarás el periodo dentro de tu presupuesto."
+                "Al ritmo actual y contando los recurrentes que faltan, cerrarás dentro de tu presupuesto."
               ),
           }
         : {
             icon: "🔮",
             title: <Money value={projectedTotal} />,
-            text: "Es tu gasto estimado si mantienes el ritmo actual hasta el final del periodo.",
+            text: "Es tu gasto estimado al final del periodo: el ritmo actual más los recurrentes que faltan.",
           }
     );
   }
@@ -293,6 +359,64 @@ export default async function Dashboard() {
           <span className={`metric-badge ${savings.className}`}>{savings.label}</span>
         </article>
       </section>
+
+      {forecast && (
+        <section className="card forecast-card">
+          <div className="forecast-main">
+            <span className="eyebrow">Previsión de cierre · {periodLabel}</span>
+            <p className={`forecast-value ${forecast.projectedBalance >= 0 ? "income" : "expense"}`}>
+              {forecast.projectedBalance >= 0 ? "+" : ""}
+              <Money value={forecast.projectedBalance} strong />
+            </p>
+            <p className="subtitle">
+              {forecast.daysLeft === 0
+                ? "Hoy se cierra el periodo."
+                : forecast.projectedBalance >= 0
+                  ? `A este ritmo terminaréis el periodo con margen. Quedan ${forecast.daysLeft} días.`
+                  : `A este ritmo terminaréis en negativo. Quedan ${forecast.daysLeft} días para corregirlo.`}
+            </p>
+          </div>
+          <dl className="forecast-breakdown">
+            <div>
+              <dt>Balance actual</dt>
+              <dd>
+                <Money value={forecast.currentBalance} />
+              </dd>
+            </div>
+            {forecast.pendingIncome > 0 && (
+              <div>
+                <dt>Ingresos recurrentes por llegar</dt>
+                <dd className="income">
+                  +<Money value={forecast.pendingIncome} />
+                </dd>
+              </div>
+            )}
+            {forecast.pendingExpense > 0 && (
+              <div>
+                <dt>Recurrentes por cobrar</dt>
+                <dd className="expense">
+                  −<Money value={forecast.pendingExpense} />
+                </dd>
+              </div>
+            )}
+            <div>
+              <dt>
+                Gasto del día a día estimado
+                {forecast.daysLeft > 0 && (
+                  <small>
+                    {" "}
+                    (<Money value={forecast.dailyVariable} />
+                    /día × {forecast.daysLeft})
+                  </small>
+                )}
+              </dt>
+              <dd className="expense">
+                −<Money value={forecast.projectedVariable} />
+              </dd>
+            </div>
+          </dl>
+        </section>
+      )}
 
       <section className="dashboard-insights">
         <article className="budget-card">

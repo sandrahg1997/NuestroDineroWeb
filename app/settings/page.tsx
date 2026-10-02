@@ -14,7 +14,15 @@ export default async function Page() {
         <p>Vuelve a iniciar sesión si esta pantalla no se actualiza.</p>
       </AppShell>
     );
-  const { data: h } = await supabase.from("households").select("name,invite_code").eq("id", householdId).single();
+  const [{ data: h }, { data: prefs }] = await Promise.all([
+    supabase.from("households").select("name,invite_code").eq("id", householdId).single(),
+    // Si la migración de notificaciones aún no está aplicada, esto falla y se usan los valores por defecto.
+    supabase
+      .from("user_preferences")
+      .select("notify_partner_activity,notify_weekly_report")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
   return (
     <AppShell households={households} hideAmounts={hideAmounts}>
       <PageHeader
@@ -29,6 +37,8 @@ export default async function Page() {
         email={user.email ?? ""}
         displayName={(user.user_metadata?.display_name as string) ?? ""}
         userId={user.id}
+        notifyPartnerActivity={prefs?.notify_partner_activity ?? true}
+        notifyWeeklyReport={prefs?.notify_weekly_report ?? true}
       />
     </AppShell>
   );

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Copy, Download, LoaderCircle, Plus, TriangleAlert, Upload, User, Users } from "lucide-react";
 import { useToast } from "./Toast";
 import { useRouter } from "next/navigation";
+import NotificationSettings from "./NotificationSettings";
 export default function SettingsManager({
   householdId,
   householdName,
@@ -11,6 +12,8 @@ export default function SettingsManager({
   email,
   displayName,
   userId,
+  notifyPartnerActivity = true,
+  notifyWeeklyReport = true,
 }: {
   householdId: string;
   householdName: string;
@@ -18,6 +21,8 @@ export default function SettingsManager({
   email: string;
   displayName: string;
   userId: string;
+  notifyPartnerActivity?: boolean;
+  notifyWeeklyReport?: boolean;
 }) {
   const [joinCode, setJoinCode] = useState("");
   const [creating, setCreating] = useState(false);
@@ -324,6 +329,7 @@ export default function SettingsManager({
           )}
         </div>
       </form>
+      <NotificationSettings partnerActivity={notifyPartnerActivity} weeklyReport={notifyWeeklyReport} />
       <div className="card">
         <h2>
           <Users size={20} /> Finanzas compartidas
