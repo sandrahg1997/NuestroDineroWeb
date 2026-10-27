@@ -19,7 +19,7 @@ import {
   savingsTier,
   transactionsHref,
 } from "@/lib/utils";
-import { ArrowDownRight, ArrowUpRight, PiggyBank, Plus, ReceiptText, Sparkles, WalletCards } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, PiggyBank, Plus, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -286,17 +286,14 @@ export default async function Dashboard() {
 
       <section className="dashboard-hero">
         <div className="hero-copy">
-          <div className="hero-kicker">
-            <Sparkles size={15} /> Tu periodo, de un vistazo
-          </div>
           <div className="dashboard-range-inline">
             <DashboardRange action={saveDashboardRange} from={selectedStart} to={selectedEnd} />
           </div>
           <p className="hero-label">Balance disponible</p>
           <h1 className={balance >= 0 ? "hero-balance positive" : "hero-balance negative"}>
-            <Money value={balance} strong />
+            <Money value={balance} strong split />
           </h1>
-          <div className="hero-trend">
+          <div className={`hero-trend ${expenseChange <= 0 ? "good" : "bad"}`}>
             {expenseChange <= 0 ? <ArrowDownRight size={17} /> : <ArrowUpRight size={17} />}
             <span>
               {Math.abs(Math.round(expenseChange))}% de gasto {expenseChange <= 0 ? "menos" : "más"} que el periodo
@@ -304,11 +301,18 @@ export default async function Dashboard() {
             </span>
           </div>
         </div>
-        <div className="hero-orb" aria-hidden="true">
-          <WalletCards size={54} />
-        </div>
-        <div className="hero-glow hero-glow-one" />
-        <div className="hero-glow hero-glow-two" />
+        {/* Las dos monedas del icono, como marca de agua */}
+        <svg className="hero-mark" viewBox="180 190 680 680" aria-hidden="true">
+          <mask id="hero-mark-gap">
+            <rect x="0" y="0" width="1024" height="1024" fill="#fff" />
+            <circle cx="440" cy="590" r="262" fill="#000" />
+          </mask>
+          <g fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round">
+            <circle cx="604" cy="438" r="214" mask="url(#hero-mark-gap)" />
+            <circle cx="440" cy="590" r="236" />
+            <path d="M566 506 A124 124 0 1 0 566 674 M324 560 H486 M324 620 H474" />
+          </g>
+        </svg>
       </section>
 
       <div className="hero-add-row">

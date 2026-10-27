@@ -315,3 +315,42 @@ a.cmp-item:hover{background:rgba(124,77,204,.08)}
 .notify-option span{display:grid;gap:2px}
 .notify-option small{color:var(--muted);font-size:12px}
 @media(max-width:900px){.forecast-card,.review-grid{grid-template-columns:1fr}}
+
+/* Saldo de Inicio v3: sobrio, a juego con el icono (ciruela + dorado champán) */
+.dashboard-hero{--hero-gold:#e9c98d;background:linear-gradient(135deg,#43175a 0%,#2a1038 55%,#1f0b2c 100%);border:1px solid rgba(233,201,141,.14);border-radius:28px;box-shadow:0 20px 50px rgba(42,16,56,.26);min-height:0;padding:30px 34px}
+.hero-copy{flex:1;min-width:0}
+.hero-mark{position:absolute;right:-60px;bottom:-70px;width:300px;height:300px;color:var(--hero-gold);opacity:.16;z-index:0;pointer-events:none}
+.hero-label{margin:24px 0 6px;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--hero-gold)}
+.hero-balance{font-size:clamp(40px,5.4vw,60px);font-weight:650;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.hero-balance.positive{color:#fff8ec}
+.hero-balance.negative{color:#ffc2d4}
+.amount-minor{margin-left:2px;font-size:.48em;font-weight:500;letter-spacing:0;opacity:.6}
+.hero-trend{display:inline-flex;margin-top:16px;padding:6px 11px;border:1px solid rgba(255,255,255,.16);border-radius:999px;font-size:12px;font-weight:600;color:rgba(255,255,255,.78)}
+.hero-trend.good{border-color:rgba(134,214,174,.35);color:#a9e5c6}
+.hero-trend.bad{border-color:rgba(255,160,190,.35);color:#ffb8cc}
+.dashboard-range-inline{margin:0}
+.dashboard-hero .dashboard-range-form{display:block;margin:0;padding:0;border:0;background:transparent}
+.dashboard-hero .range-presets{gap:4px;margin:0}
+.dashboard-hero .range-preset{padding:6px 11px;border:1px solid transparent;background:transparent;color:rgba(255,255,255,.62);font-weight:600}
+.dashboard-hero .range-preset:hover{background:rgba(255,255,255,.06);color:#fff}
+.dashboard-hero .range-preset.active{border-color:rgba(233,201,141,.4);background:rgba(233,201,141,.12);color:#f3d9a4}
+.range-custom{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:12px}
+.range-custom[hidden]{display:none}
+.dashboard-hero .dashboard-range-form label{color:rgba(255,255,255,.6)}
+.dashboard-hero .dashboard-range-form input{padding:8px 10px;border:1px solid rgba(255,255,255,.18);border-radius:10px;background:rgba(255,255,255,.08);color:#fff;color-scheme:dark}
+.hero-add-row{justify-content:flex-end;margin:14px 0 22px}
+.hero-add{width:auto;max-width:none;padding:10px 16px;border-radius:12px;font-size:14px}
+@media(max-width:900px){.hero-add-row{display:none}.dashboard-hero{padding:24px 22px}.hero-mark{right:-50px;bottom:-50px;width:220px;height:220px}}
+@media(max-width:560px){.dashboard-hero{padding:22px 18px;align-items:stretch}.hero-balance{font-size:42px}.hero-mark{right:-40px;bottom:-40px;width:180px;height:180px}.range-custom label{flex:1 1 120px}}
+
+/* Botones v3: ciruela + crema en claro, champán + ciruela en oscuro (a juego con el icono) */
+:root{--btn-bg:#4b1a64;--btn-bg2:#2a1038;--btn-fg:#fff8ec;--btn-ring:rgba(201,154,75,.6)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--btn-bg:#f0d6a2;--btn-bg2:#d4aa63;--btn-fg:#2a1038}}
+:root[data-theme="dark"]{--btn-bg:#f0d6a2;--btn-bg2:#d4aa63;--btn-fg:#2a1038}
+.btn{font-weight:650;letter-spacing:.005em;transition:filter .15s ease,box-shadow .15s ease,transform .1s ease}
+.btn:active:not([disabled]){transform:translateY(1px)}
+.btn:focus-visible{outline:2px solid var(--btn-ring);outline-offset:2px}
+.btn-primary{background:linear-gradient(180deg,var(--btn-bg),var(--btn-bg2));color:var(--btn-fg);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 6px 16px rgba(42,16,56,.16)}
+.btn-primary:hover:not([disabled]){filter:brightness(1.1)}
+.btn-soft{background:#f3ecf6;color:#4b1a64}
+.fab{background:linear-gradient(180deg,var(--btn-bg),var(--btn-bg2));color:var(--btn-fg);box-shadow:inset 0 0 0 1px rgba(233,201,141,.28),0 12px 28px rgba(42,16,56,.3)}
