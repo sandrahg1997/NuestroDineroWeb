@@ -3,7 +3,8 @@
 1. Crear proyecto en Supabase.
 2. Ejecutar `supabase/schema.sql` completo en SQL Editor. Si el proyecto ya
    existía, ejecuta además las migraciones nuevas de `supabase/migrations/`
-   (p. ej. `2026-08-30-recurring-cron.sql` y `2026-10-02-push-reunion-retos.sql`).
+   (p. ej. `2026-08-30-recurring-cron.sql`, `2026-10-02-push-reunion-retos.sql` y
+   `2026-10-27-recurring-reminders.sql`).
 3. Copiar `.env.example` a `.env.local` y rellenar URL, clave publicable,
    `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET` (cadena larga aleatoria) y las
    claves VAPID de notificaciones (`npx web-push generate-vapid-keys`).

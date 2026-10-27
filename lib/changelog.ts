@@ -8,6 +8,15 @@ export type ChangelogEntry = {
 // `version` debe ser único y ordenable (usamos fecha YYYY-MM-DD); `date` es el texto que se muestra.
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-10-27",
+    date: "27 de octubre de 2026",
+    items: [
+      "Arreglado: en el móvil, la lista de Recurrentes no se veía. Ahora aparece con su importe, cuándo toca (Hoy, Mañana, En 3 días…) y botones para pausar, editar o borrar.",
+      "Mejorado: Recurrentes más compacto en el móvil, ordenado por próximo cobro y con los pausados aparte. El botón + de esa pantalla crea un recurrente.",
+      "Nuevo: aviso de próximos cobros. La mañana de antes te avisamos de lo que se cobra («Mañana se cobra la hipoteca (850 €)»). Puedes desactivarlo en Ajustes › Notificaciones.",
+    ],
+  },
+  {
     version: "2026-10-02",
     date: "2 de octubre de 2026",
     items: [

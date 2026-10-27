@@ -1,10 +1,12 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Category, Frequency, RecurringTransaction, TransactionType } from "@/lib/types";
-import { ArrowUpRight, LoaderCircle, Pencil, Plus, ReceiptText, Repeat2, Trash2, X } from "lucide-react";
+import { LoaderCircle, Pencil, Plus, Trash2, X } from "lucide-react";
 import Money from "@/components/Money";
 import { dateKey, monthlyEquivalent } from "@/lib/utils";
+import { daysUntil, dueLabel, frequencyLabel, parseAmount, sortRecurring } from "@/lib/recurring";
 import { useToast } from "./Toast";
 import MoneyInput from "./MoneyInput";
 
@@ -29,8 +31,9 @@ const blank: F = {
   next_date: dateKey(),
   is_active: true,
 };
-const frequencyLabel = (f: Frequency) => (f === "weekly" ? "Semanal" : f === "monthly" ? "Mensual" : "Anual");
 const nextDateLabel = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("es-ES");
+// Cobros en los próximos 7 días: se resaltan.
+const isDueSoon = (r: RecurringTransaction, today: string) => r.is_active && daysUntil(r.next_date, today) <= 7;
 export default function RecurringManager({
   householdId,
   initial,
@@ -46,6 +49,22 @@ export default function RecurringManager({
   const [saving, setSaving] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const params = useSearchParams();
+  const router = useRouter();
+  const today = dateKey();
+  const sorted = useMemo(() => sortRecurring(rows), [rows]);
+  const groups = [
+    { label: "Activos", items: sorted.filter((r) => r.is_active) },
+    { label: "Pausados", items: sorted.filter((r) => !r.is_active) },
+  ].filter((g) => g.items.length);
+
+  // El botón + del móvil abre el formulario con ?new=1; se quita el parámetro
+  // para que volver a pulsarlo lo abra de nuevo.
+  useEffect(() => {
+    if (params.get("new") !== "1") return;
+    setForm({ ...blank, next_date: dateKey() });
+    router.replace("/recurring", { scroll: false });
+  }, [params, router]);
 
   const totals = useMemo(() => {
     const active = rows.filter((r) => r.is_active);
@@ -62,12 +81,17 @@ export default function RecurringManager({
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!form) return;
+    const amount = parseAmount(form.amount);
+    if (!(amount > 0)) {
+      toast("Escribe un importe válido mayor que 0.", "error");
+      return;
+    }
     setSaving(true);
     const s = createClient();
     const payload = {
       household_id: householdId,
       concept: form.concept,
-      amount: Number(form.amount.replace(",", ".")),
+      amount,
       category_id: form.category_id || null,
       type: form.type,
       note: form.note,
@@ -84,7 +108,8 @@ export default function RecurringManager({
       setSaving(false);
       return;
     }
-    setRows(form.id ? rows.map((r) => (r.id === form.id ? data : r)) : [...rows, data]);
+    const id = form.id;
+    setRows((prev) => (id ? prev.map((r) => (r.id === id ? data : r)) : [...prev, data]));
     setForm(null);
     setSaving(false);
   }
@@ -98,7 +123,7 @@ export default function RecurringManager({
       .select("*,category:categories(*)")
       .single();
     if (error) toast(error.message, "error");
-    else setRows(rows.map((x) => (x.id === r.id ? data : x)));
+    else setRows((prev) => prev.map((x) => (x.id === r.id ? data : x)));
     setTogglingId(null);
   }
   async function remove(id: string) {
@@ -107,7 +132,7 @@ export default function RecurringManager({
     const s = createClient();
     const { error } = await s.from("recurring_transactions").delete().eq("id", id);
     if (error) toast(error.message, "error");
-    else setRows(rows.filter((x) => x.id !== id));
+    else setRows((prev) => prev.filter((x) => x.id !== id));
     setDeletingId(null);
   }
   function edit(r: RecurringTransaction) {
@@ -127,43 +152,25 @@ export default function RecurringManager({
     <>
       {rows.length > 0 && (
         <>
-          <section
-            className="dashboard-metrics"
-            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", marginBottom: 4 }}
-          >
-            <article className="dashboard-metric-card">
-              <div className="metric-icon metric-icon-expense">
-                <ReceiptText size={20} />
-              </div>
-              <div>
-                <p className="metric-label">Gasto recurrente mensual</p>
-                <p className="dashboard-metric-value">
-                  <Money value={totals.monthlyExpense} />
-                </p>
-              </div>
-            </article>
-            <article className="dashboard-metric-card">
-              <div className="metric-icon metric-icon-income">
-                <ArrowUpRight size={20} />
-              </div>
-              <div>
-                <p className="metric-label">Ingreso recurrente mensual</p>
-                <p className="dashboard-metric-value">
-                  <Money value={totals.monthlyIncome} />
-                </p>
-              </div>
-            </article>
-            <article className="dashboard-metric-card">
-              <div className="metric-icon metric-icon-saving">
-                <Repeat2 size={20} />
-              </div>
-              <div>
-                <p className="metric-label">Recurrentes activos</p>
-                <p className="dashboard-metric-value">{totals.activeCount}</p>
-              </div>
-            </article>
+          <section className="card recurring-summary">
+            <div>
+              <p className="metric-label">Gasto / mes</p>
+              <p className="recurring-summary-value expense">
+                <Money value={totals.monthlyExpense} />
+              </p>
+            </div>
+            <div>
+              <p className="metric-label">Ingreso / mes</p>
+              <p className="recurring-summary-value income">
+                <Money value={totals.monthlyIncome} />
+              </p>
+            </div>
+            <div>
+              <p className="metric-label">Activos</p>
+              <p className="recurring-summary-value">{totals.activeCount}</p>
+            </div>
           </section>
-          <p className="subtitle" style={{ margin: "10px 0 18px" }}>
+          <p className="subtitle recurring-note">
             Solo cuenta lo <strong>activo</strong> (
             {totals.pausedCount > 0
               ? `${totals.pausedCount} pausado${totals.pausedCount === 1 ? "" : "s"}`
@@ -173,7 +180,7 @@ export default function RecurringManager({
         </>
       )}
 
-      <div className="toolbar" style={{ justifyContent: "flex-end", marginBottom: 14 }}>
+      <div className="toolbar desktop-only" style={{ justifyContent: "flex-end", marginBottom: 14 }}>
         <button className="btn btn-primary" onClick={() => setForm({ ...blank })}>
           <Plus size={16} />
           Nuevo recurrente
@@ -192,8 +199,8 @@ export default function RecurringManager({
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
+            {sorted.map((r) => (
+              <tr key={r.id} className={r.is_active ? "" : "recurring-paused"}>
                 <td>
                   <strong>{r.concept}</strong>
                   <div className="subtitle">
@@ -201,7 +208,14 @@ export default function RecurringManager({
                   </div>
                 </td>
                 <td>{frequencyLabel(r.frequency)}</td>
-                <td>{nextDateLabel(r.next_date)}</td>
+                <td>
+                  {nextDateLabel(r.next_date)}
+                  {r.is_active && (
+                    <div className={`subtitle${isDueSoon(r, today) ? " due-soon" : ""}`}>
+                      {dueLabel(r.next_date, today)}
+                    </div>
+                  )}
+                </td>
                 <td className={r.type === "expense" ? "expense" : "income"}>
                   <strong>
                     <Money value={r.amount} />
@@ -242,57 +256,70 @@ export default function RecurringManager({
         </table>
         {rows.length > 0 && (
           <div className="mobile-list">
-            {rows.map((r) => (
-              <div className={`mobile-row recurring-row${r.is_active ? "" : " paused"}`} key={r.id}>
-                <div className={`recent-icon ${r.type === "expense" ? "expense" : "income"}`}>
-                  {r.category?.icon || (r.type === "expense" ? "↓" : "↑")}
-                </div>
-                <div className="left">
-                  <strong>{r.concept}</strong>
-                  <span className="meta">
-                    {frequencyLabel(r.frequency)} · {nextDateLabel(r.next_date)}
-                    {r.category?.name ? ` · ${r.category.name}` : ""}
-                  </span>
-                </div>
-                <div className="right">
-                  <div className="recurring-right">
-                    <span className={`amount ${r.type === "expense" ? "expense" : "income"}`}>
-                      <Money value={r.amount} />
-                    </span>
-                    <button
-                      type="button"
-                      className={`btn recurring-status ${r.is_active ? "btn-soft" : "btn-ghost"}`}
-                      onClick={() => toggle(r)}
-                      disabled={togglingId === r.id}
-                    >
-                      {togglingId === r.id ? (
-                        <LoaderCircle size={12} className="spin" />
-                      ) : r.is_active ? (
-                        "Activo"
-                      ) : (
-                        "Pausado"
-                      )}
-                    </button>
+            {groups.map((g) => (
+              <div className="mobile-group" key={g.label}>
+                {groups.length > 1 && <div className="mobile-group-label">{g.label}</div>}
+                {g.items.map((r) => (
+                  <div className={`mobile-row recurring-row${r.is_active ? "" : " paused"}`} key={r.id}>
+                    <div className={`recent-icon ${r.type === "expense" ? "expense" : "income"}`}>
+                      {r.category?.icon || (r.type === "expense" ? "↓" : "↑")}
+                    </div>
+                    <div className="left">
+                      <strong>{r.concept}</strong>
+                      <span className="meta">
+                        {r.is_active && (
+                          <>
+                            <span className={isDueSoon(r, today) ? "due-soon" : ""}>
+                              {dueLabel(r.next_date, today)}
+                            </span>
+                            {" · "}
+                          </>
+                        )}
+                        {frequencyLabel(r.frequency)}
+                        {r.category?.name ? ` · ${r.category.name}` : ""}
+                      </span>
+                    </div>
+                    <div className="right">
+                      <div className="recurring-right">
+                        <span className={`amount ${r.type === "expense" ? "expense" : "income"}`}>
+                          <Money value={r.amount} />
+                        </span>
+                        <button
+                          type="button"
+                          className={`btn recurring-status ${r.is_active ? "btn-soft" : "btn-ghost"}`}
+                          onClick={() => toggle(r)}
+                          disabled={togglingId === r.id}
+                        >
+                          {togglingId === r.id ? (
+                            <LoaderCircle size={12} className="spin" />
+                          ) : r.is_active ? (
+                            "Activo"
+                          ) : (
+                            "Pausado"
+                          )}
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        aria-label={`Editar ${r.concept}`}
+                        onClick={() => edit(r)}
+                        disabled={deletingId === r.id}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost expense"
+                        aria-label={`Eliminar ${r.concept}`}
+                        onClick={() => remove(r.id)}
+                        disabled={deletingId === r.id}
+                      >
+                        {deletingId === r.id ? <LoaderCircle size={16} className="spin" /> : <Trash2 size={16} />}
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    aria-label={`Editar ${r.concept}`}
-                    onClick={() => edit(r)}
-                    disabled={deletingId === r.id}
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost expense"
-                    aria-label={`Eliminar ${r.concept}`}
-                    onClick={() => remove(r.id)}
-                    disabled={deletingId === r.id}
-                  >
-                    {deletingId === r.id ? <LoaderCircle size={16} className="spin" /> : <Trash2 size={16} />}
-                  </button>
-                </div>
+                ))}
               </div>
             ))}
           </div>

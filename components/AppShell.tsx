@@ -199,7 +199,11 @@ export default function AppShell({
       )}
 
       {!pathname.startsWith("/transactions") && (
-        <Link href="/transactions?new=expense" className="fab" aria-label="Añadir gasto">
+        <Link
+          href={pathname.startsWith("/recurring") ? "/recurring?new=1" : "/transactions?new=expense"}
+          className="fab"
+          aria-label={pathname.startsWith("/recurring") ? "Nuevo recurrente" : "Añadir gasto"}
+        >
           <Plus />
         </Link>
       )}

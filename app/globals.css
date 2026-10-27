@@ -56,6 +56,16 @@
 .recurring-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-right:4px}
 .recurring-status{padding:3px 9px;font-size:11px;border-radius:999px}
 .recurring-row.paused .left,.recurring-row.paused .amount{opacity:.55}
+.recurring-paused td{opacity:.55}
+.recurring-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px 16px;margin-bottom:4px}
+.recurring-summary>div{min-width:0}
+.recurring-summary>div+div{border-left:1px solid var(--line);padding-left:12px}
+.recurring-summary .metric-label{font-size:12px;margin:0}
+.recurring-summary-value{font-size:20px;font-weight:850;margin:4px 0 0;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recurring-note{margin:10px 0 18px;font-size:13px}
+.due-soon{color:var(--primary);font-weight:750}
+@media(max-width:900px){.desktop-only{display:none !important}}
+@media(max-width:560px){.recurring-summary{gap:8px;padding:12px}.recurring-summary>div+div{padding-left:8px}.recurring-summary-value{font-size:16px}}
 .recurring-row .btn-ghost{padding:8px}
 
 .row-menu{position:relative}

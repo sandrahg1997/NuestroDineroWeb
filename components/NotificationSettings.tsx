@@ -24,16 +24,21 @@ async function getRegistration() {
 export default function NotificationSettings({
   partnerActivity: initialPartnerActivity,
   weeklyReport: initialWeeklyReport,
+  recurringReminder: initialRecurringReminder,
 }: {
   partnerActivity: boolean;
   weeklyReport: boolean;
+  recurringReminder: boolean;
 }) {
   const [support, setSupport] = useState<Support>("checking");
   const [subscribed, setSubscribed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [partnerActivity, setPartnerActivity] = useState(initialPartnerActivity);
-  const [weeklyReport, setWeeklyReport] = useState(initialWeeklyReport);
+  const [prefs, setPrefs] = useState({
+    partnerActivity: initialPartnerActivity,
+    weeklyReport: initialWeeklyReport,
+    recurringReminder: initialRecurringReminder,
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -106,18 +111,18 @@ export default function NotificationSettings({
     }
   }
 
-  async function savePrefs(next: { partnerActivity: boolean; weeklyReport: boolean }) {
-    const prev = { partnerActivity, weeklyReport };
-    setPartnerActivity(next.partnerActivity);
-    setWeeklyReport(next.weeklyReport);
+  async function savePrefs(change: Partial<typeof prefs>) {
+    const prev = prefs;
+    const next = { ...prefs, ...change };
+    setPrefs(next);
     const s = createClient();
     const { error } = await s.rpc("set_notification_prefs", {
       p_partner_activity: next.partnerActivity,
       p_weekly_report: next.weeklyReport,
+      p_recurring_reminder: next.recurringReminder,
     });
     if (error) {
-      setPartnerActivity(prev.partnerActivity);
-      setWeeklyReport(prev.weeklyReport);
+      setPrefs(prev);
       toast(error.message, "error");
     }
   }
@@ -176,8 +181,8 @@ export default function NotificationSettings({
             <label className="notify-option">
               <input
                 type="checkbox"
-                checked={partnerActivity}
-                onChange={(e) => savePrefs({ partnerActivity: e.target.checked, weeklyReport })}
+                checked={prefs.partnerActivity}
+                onChange={(e) => savePrefs({ partnerActivity: e.target.checked })}
               />
               <span>
                 <strong>Actividad de tu pareja</strong>
@@ -187,12 +192,23 @@ export default function NotificationSettings({
             <label className="notify-option">
               <input
                 type="checkbox"
-                checked={weeklyReport}
-                onChange={(e) => savePrefs({ partnerActivity, weeklyReport: e.target.checked })}
+                checked={prefs.weeklyReport}
+                onChange={(e) => savePrefs({ weeklyReport: e.target.checked })}
               />
               <span>
                 <strong>Informe semanal</strong>
                 <small>Los domingos por la tarde: gasto de la semana, presupuesto y retos.</small>
+              </span>
+            </label>
+            <label className="notify-option">
+              <input
+                type="checkbox"
+                checked={prefs.recurringReminder}
+                onChange={(e) => savePrefs({ recurringReminder: e.target.checked })}
+              />
+              <span>
+                <strong>Próximos cobros recurrentes</strong>
+                <small>«Mañana se cobra la hipoteca (850 €)», la mañana de antes.</small>
               </span>
             </label>
           </div>

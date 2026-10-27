@@ -14,6 +14,7 @@ export default function SettingsManager({
   userId,
   notifyPartnerActivity = true,
   notifyWeeklyReport = true,
+  notifyRecurringReminder = true,
 }: {
   householdId: string;
   householdName: string;
@@ -23,6 +24,7 @@ export default function SettingsManager({
   userId: string;
   notifyPartnerActivity?: boolean;
   notifyWeeklyReport?: boolean;
+  notifyRecurringReminder?: boolean;
 }) {
   const [joinCode, setJoinCode] = useState("");
   const [creating, setCreating] = useState(false);
@@ -329,7 +331,11 @@ export default function SettingsManager({
           )}
         </div>
       </form>
-      <NotificationSettings partnerActivity={notifyPartnerActivity} weeklyReport={notifyWeeklyReport} />
+      <NotificationSettings
+        partnerActivity={notifyPartnerActivity}
+        weeklyReport={notifyWeeklyReport}
+        recurringReminder={notifyRecurringReminder}
+      />
       <div className="card">
         <h2>
           <Users size={20} /> Finanzas compartidas
