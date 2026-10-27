@@ -4,7 +4,7 @@
 // NO cachea datos ni respuestas de API/Supabase para no mostrar nunca
 // información financiera desactualizada.
 
-const CACHE = "ourmoney-shell-v1";
+const CACHE = "ourmoney-shell-v2";
 const PRECACHE = ["/offline.html", "/icon-192.png", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
