@@ -29,6 +29,8 @@ const blank: F = {
   next_date: dateKey(),
   is_active: true,
 };
+const frequencyLabel = (f: Frequency) => (f === "weekly" ? "Semanal" : f === "monthly" ? "Mensual" : "Anual");
+const nextDateLabel = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("es-ES");
 export default function RecurringManager({
   householdId,
   initial,
@@ -198,8 +200,8 @@ export default function RecurringManager({
                     {r.category?.icon} {r.category?.name}
                   </div>
                 </td>
-                <td>{r.frequency === "weekly" ? "Semanal" : r.frequency === "monthly" ? "Mensual" : "Anual"}</td>
-                <td>{new Date(`${r.next_date}T12:00:00`).toLocaleDateString("es-ES")}</td>
+                <td>{frequencyLabel(r.frequency)}</td>
+                <td>{nextDateLabel(r.next_date)}</td>
                 <td className={r.type === "expense" ? "expense" : "income"}>
                   <strong>
                     <Money value={r.amount} />
@@ -238,6 +240,63 @@ export default function RecurringManager({
             ))}
           </tbody>
         </table>
+        {rows.length > 0 && (
+          <div className="mobile-list">
+            {rows.map((r) => (
+              <div className={`mobile-row recurring-row${r.is_active ? "" : " paused"}`} key={r.id}>
+                <div className={`recent-icon ${r.type === "expense" ? "expense" : "income"}`}>
+                  {r.category?.icon || (r.type === "expense" ? "↓" : "↑")}
+                </div>
+                <div className="left">
+                  <strong>{r.concept}</strong>
+                  <span className="meta">
+                    {frequencyLabel(r.frequency)} · {nextDateLabel(r.next_date)}
+                    {r.category?.name ? ` · ${r.category.name}` : ""}
+                  </span>
+                </div>
+                <div className="right">
+                  <div className="recurring-right">
+                    <span className={`amount ${r.type === "expense" ? "expense" : "income"}`}>
+                      <Money value={r.amount} />
+                    </span>
+                    <button
+                      type="button"
+                      className={`btn recurring-status ${r.is_active ? "btn-soft" : "btn-ghost"}`}
+                      onClick={() => toggle(r)}
+                      disabled={togglingId === r.id}
+                    >
+                      {togglingId === r.id ? (
+                        <LoaderCircle size={12} className="spin" />
+                      ) : r.is_active ? (
+                        "Activo"
+                      ) : (
+                        "Pausado"
+                      )}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    aria-label={`Editar ${r.concept}`}
+                    onClick={() => edit(r)}
+                    disabled={deletingId === r.id}
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost expense"
+                    aria-label={`Eliminar ${r.concept}`}
+                    onClick={() => remove(r.id)}
+                    disabled={deletingId === r.id}
+                  >
+                    {deletingId === r.id ? <LoaderCircle size={16} className="spin" /> : <Trash2 size={16} />}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         {!rows.length && (
           <div className="empty">
             <span className="empty-icon">
