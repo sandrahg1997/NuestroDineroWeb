@@ -2,7 +2,18 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  Cell,
+  ComposedChart,
+  Line,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import Money from "@/components/Money";
 import type { Category } from "@/lib/types";
 import { categoryColor, dateKey, transactionsHref } from "@/lib/utils";
@@ -11,7 +22,15 @@ import { ArrowDownRight, ArrowUpRight, CalendarRange, Minus, ReceiptText, Sparkl
 
 type Row = { date: string; amount: number; type: "expense" | "income"; category_id: string | null };
 type PeriodRow = { id: string; name: string; start_date: string; end_date: string };
-type PeriodPoint = { id: string; label: string; expense: number; income: number };
+type PeriodPoint = {
+  id: string;
+  label: string;
+  start: string;
+  end: string;
+  expense: number;
+  income: number;
+  balance: number;
+};
 type CmpBasis = "prev" | "avg3" | "year";
 type CmpView = "all" | "cuts" | "ups";
 
@@ -65,7 +84,15 @@ export default function HistoricoCharts({
           else income += Number(t.amount);
         }
       }
-      return { id: p.id, label: p.name, expense, income };
+      return {
+        id: p.id,
+        label: p.name,
+        start: p.start_date,
+        end: p.end_date,
+        expense,
+        income,
+        balance: income - expense,
+      };
     });
 
     const totalExpense = actual.reduce((s, p) => s + p.expense, 0);
@@ -80,6 +107,7 @@ export default function HistoricoCharts({
 
   const periodsTracked = evolution.length;
   const evolutionChart = evolution.slice(-MAX_BARS);
+  const totalBalance = totalIncome - totalExpense;
 
   // ─── Comparativa de gasto por categoría entre periodos ────────────────────
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
@@ -334,7 +362,7 @@ export default function HistoricoCharts({
         <div className="area-chart-wrap">
           {evolutionChart.length ? (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={evolutionChart} margin={{ top: 10, right: 6, left: -18, bottom: 0 }}>
+              <ComposedChart data={evolutionChart} margin={{ top: 10, right: 6, left: -18, bottom: 0 }}>
                 <XAxis
                   dataKey="label"
                   axisLine={false}
@@ -353,9 +381,13 @@ export default function HistoricoCharts({
                     }}
                     labelStyle={{ color: chart.tooltipText }}
                     itemStyle={{ color: chart.tooltipText }}
-                    formatter={(value: number, name: string) => [`${value.toFixed(2)} €`, name]}
+                    formatter={(value: number, name: string) => [
+                      `${name === "Balance" && value > 0 ? "+" : ""}${value.toFixed(2)} €`,
+                      name,
+                    ]}
                   />
                 )}
+                <ReferenceLine y={0} stroke={chart.grid} />
                 <Bar dataKey="expense" name="Gastos" radius={[6, 6, 0, 0]}>
                   {evolutionChart.map((p) => (
                     <Cell key={`e-${p.id}`} fill="#c0587a" />
@@ -366,7 +398,16 @@ export default function HistoricoCharts({
                     <Cell key={`i-${p.id}`} fill="#5f9e80" />
                   ))}
                 </Bar>
-              </BarChart>
+                <Line
+                  dataKey="balance"
+                  name="Balance"
+                  type="monotone"
+                  stroke="#c99a4b"
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: "#c99a4b", strokeWidth: 0 }}
+                  activeDot={{ r: 5 }}
+                />
+              </ComposedChart>
             </ResponsiveContainer>
           ) : (
             <div className="empty">Todavía no hay movimientos en tus periodos.</div>
@@ -379,6 +420,9 @@ export default function HistoricoCharts({
           <span>
             <i className="chart-key income-key" /> Ingresos
           </span>
+          <span>
+            <i className="chart-key balance-key" /> Balance
+          </span>
           {periodsTracked > MAX_BARS && (
             <span>
               Mostrando los últimos {MAX_BARS} de {periodsTracked} periodos.
@@ -386,6 +430,51 @@ export default function HistoricoCharts({
           )}
         </div>
       </article>
+
+      {evolution.length > 0 && (
+        <article className="card period-balance-card">
+          <div className="section-head dashboard-section-head">
+            <div>
+              <span className="eyebrow">Periodo a periodo</span>
+              <h2>Ingresos, gastos y diferencia</h2>
+            </div>
+          </div>
+          <div className="period-balance-list">
+            {[...evolution].reverse().map((p) => (
+              <Link key={p.id} href={transactionsHref({ from: p.start, to: p.end })} className="period-balance-row">
+                <div className="period-balance-main">
+                  <strong>{p.label}</strong>
+                  <span>
+                    <span className="income">
+                      +<Money value={p.income} />
+                    </span>{" "}
+                    ·{" "}
+                    <span className="expense">
+                      −<Money value={p.expense} />
+                    </span>
+                  </span>
+                </div>
+                <div className={`period-balance-diff ${p.balance >= 0 ? "income" : "expense"}`}>
+                  <strong>
+                    {p.balance > 0 ? "+" : p.balance < 0 ? "−" : ""}
+                    <Money value={Math.abs(p.balance)} />
+                  </strong>
+                  <span>{p.balance > 0 ? "Ahorrado" : p.balance < 0 ? "Perdido" : "En equilibrio"}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+          <div className="period-balance-total">
+            <span>
+              Total en {periodsTracked} periodo{periodsTracked === 1 ? "" : "s"}
+            </span>
+            <strong className={totalBalance >= 0 ? "income" : "expense"}>
+              {totalBalance > 0 ? "+" : totalBalance < 0 ? "−" : ""}
+              <Money value={Math.abs(totalBalance)} /> {totalBalance >= 0 ? "ahorrados" : "perdidos"}
+            </strong>
+          </div>
+        </article>
+      )}
 
       <article className="card chart-card" style={{ marginTop: 18 }}>
         <div className="section-head dashboard-section-head">
