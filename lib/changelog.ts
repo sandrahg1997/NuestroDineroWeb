@@ -8,6 +8,15 @@ export type ChangelogEntry = {
 // `version` debe ser único y ordenable (usamos fecha YYYY-MM-DD); `date` es el texto que se muestra.
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-10-28",
+    date: "28 de octubre de 2026",
+    items: [
+      "Nuevo aspecto: OurMoney estrena icono (dos monedas en dorado sobre ciruela) y una estética más sobria y elegante en toda la app, en modo claro y oscuro. Si la tienes instalada en el iPhone, bórrala de la pantalla de inicio y vuelve a añadirla desde Safari para ver el icono nuevo.",
+      "Mejorado: el saldo de Inicio es más limpio y legible, con los céntimos en pequeño, y el rango de fechas se elige con atajos (Este mes, Mes pasado, Últimos 30 días) o desde «Fechas…».",
+      "Mejorado: gráficos y barras de presupuesto con colores más suaves y sin brillos.",
+    ],
+  },
+  {
     version: "2026-10-27",
     date: "27 de octubre de 2026",
     items: [

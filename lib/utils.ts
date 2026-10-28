@@ -25,7 +25,8 @@ export function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-const CATEGORY_PALETTE = ["#8b5cf6", "#ec4899", "#3b82f6", "#10b981", "#f59e0b", "#6366f1", "#14b8a6", "#f43f5e"];
+// Tonos apagados a juego con la paleta ciruela + dorado.
+const CATEGORY_PALETTE = ["#8a4aa8", "#c99a4b", "#c0587a", "#5f9e80", "#5b74a6", "#b07656", "#9486ad", "#4b8a90"];
 
 // Color determinista por nombre de categoría: mismo color en el donut y en las listas de movimientos.
 export function categoryColor(name: string) {

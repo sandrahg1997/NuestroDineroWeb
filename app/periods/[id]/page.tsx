@@ -1,12 +1,13 @@
 import AppShell from "@/components/AppShell";
 import DashboardChartsLoader from "@/components/DashboardChartsLoader";
+import HeroMark from "@/components/HeroMark";
 import Money from "@/components/Money";
 import PageHeader from "@/components/PageHeader";
 import SubmitButton from "@/components/SubmitButton";
 import { getSessionContext } from "@/lib/data";
 import { computePeriodSummary } from "@/lib/period-summary";
 import { categoryColor, formatDateEs, relativeDayLabel } from "@/lib/utils";
-import { ArrowUpRight, PiggyBank, ReceiptText, Star, WalletCards } from "lucide-react";
+import { ArrowUpRight, PiggyBank, ReceiptText, Star } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -80,14 +81,10 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
             Balance del periodo
           </p>
           <h1 className={balance >= 0 ? "hero-balance positive" : "hero-balance negative"}>
-            <Money value={balance} />
+            <Money value={balance} strong split />
           </h1>
         </div>
-        <div className="hero-orb" aria-hidden="true">
-          <WalletCards size={54} />
-        </div>
-        <div className="hero-glow hero-glow-one" />
-        <div className="hero-glow hero-glow-two" />
+        <HeroMark />
       </section>
 
       <section className="dashboard-metrics">

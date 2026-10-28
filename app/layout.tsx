@@ -9,7 +9,14 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "OurMoney", statusBarStyle: "default" },
 };
-export const viewport: Viewport = { themeColor: "#9c4dcc", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf8f5" },
+    { media: "(prefers-color-scheme: dark)", color: "#150d1b" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+};
 
 // Aplica el tema guardado antes de pintar, para evitar el parpadeo.
 const themeScript = `try{var t=localStorage.getItem("ourmoney-theme");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t}catch(e){}`;

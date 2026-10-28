@@ -104,12 +104,12 @@ export default function DashboardCharts({
               <AreaChart data={byDay} margin={{ top: 10, right: 6, left: -18, bottom: 0 }}>
                 <defs>
                   <linearGradient id="expenseFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ec4899" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#ec4899" stopOpacity={0.02} />
+                    <stop offset="5%" stopColor="#c0587a" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#c0587a" stopOpacity={0.02} />
                   </linearGradient>
                   <linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                    <stop offset="5%" stopColor="#5f9e80" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#5f9e80" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: chart.axis, fontSize: 12 }} />
@@ -119,7 +119,7 @@ export default function DashboardCharts({
                   type="monotone"
                   dataKey="expense"
                   name="Gastos"
-                  stroke="#ec4899"
+                  stroke="#c0587a"
                   strokeWidth={3}
                   fill="url(#expenseFill)"
                 />
@@ -127,7 +127,7 @@ export default function DashboardCharts({
                   type="monotone"
                   dataKey="income"
                   name="Ingresos"
-                  stroke="#10b981"
+                  stroke="#5f9e80"
                   strokeWidth={3}
                   fill="url(#incomeFill)"
                 />

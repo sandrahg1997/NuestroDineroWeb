@@ -11,18 +11,18 @@ export type ChartTheme = {
 };
 
 const LIGHT: ChartTheme = {
-  axis: "#8b8494",
-  grid: "#e8e3ee",
+  axis: "#8a8090",
+  grid: "#ebe5e8",
   tooltipBg: "#ffffff",
-  tooltipBorder: "#e8e3ee",
-  tooltipText: "#24212b",
+  tooltipBorder: "#ebe5e8",
+  tooltipText: "#241a2b",
 };
 const DARK: ChartTheme = {
-  axis: "#a89cb6",
-  grid: "#332c44",
-  tooltipBg: "#1e1929",
-  tooltipBorder: "#332c44",
-  tooltipText: "#f1edf7",
+  axis: "#a99cb3",
+  grid: "#33263d",
+  tooltipBg: "#1f1527",
+  tooltipBorder: "#33263d",
+  tooltipText: "#f3eef5",
 };
 
 // Colores de ejes y tooltip para recharts, sincronizados con el tema activo

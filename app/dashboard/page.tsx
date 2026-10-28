@@ -2,6 +2,7 @@ import AppShell from "@/components/AppShell";
 import DashboardChartsLoader from "@/components/DashboardChartsLoader";
 import DashboardRange from "@/components/DashboardRange";
 import InsightCarousel, { type Insight } from "@/components/InsightCarousel";
+import HeroMark from "@/components/HeroMark";
 import Money from "@/components/Money";
 import PageHeader from "@/components/PageHeader";
 import { challengeProgress, type Challenge } from "@/lib/challenges";
@@ -282,7 +283,7 @@ export default async function Dashboard() {
 
   return (
     <AppShell households={households} hideAmounts={hideAmounts}>
-      <PageHeader title={`Hola, ${firstName} 👋`} subtitle={periodLabel} />
+      <PageHeader title={`Hola, ${firstName}`} subtitle={periodLabel} />
 
       <section className="dashboard-hero">
         <div className="hero-copy">
@@ -301,18 +302,7 @@ export default async function Dashboard() {
             </span>
           </div>
         </div>
-        {/* Las dos monedas del icono, como marca de agua */}
-        <svg className="hero-mark" viewBox="180 190 680 680" aria-hidden="true">
-          <mask id="hero-mark-gap">
-            <rect x="0" y="0" width="1024" height="1024" fill="#fff" />
-            <circle cx="440" cy="590" r="262" fill="#000" />
-          </mask>
-          <g fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round">
-            <circle cx="604" cy="438" r="214" mask="url(#hero-mark-gap)" />
-            <circle cx="440" cy="590" r="236" />
-            <path d="M566 506 A124 124 0 1 0 566 674 M324 560 H486 M324 620 H474" />
-          </g>
-        </svg>
+        <HeroMark />
       </section>
 
       <div className="hero-add-row">

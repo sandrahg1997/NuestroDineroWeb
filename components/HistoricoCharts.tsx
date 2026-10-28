@@ -358,12 +358,12 @@ export default function HistoricoCharts({
                 )}
                 <Bar dataKey="expense" name="Gastos" radius={[6, 6, 0, 0]}>
                   {evolutionChart.map((p) => (
-                    <Cell key={`e-${p.id}`} fill="#ec4899" />
+                    <Cell key={`e-${p.id}`} fill="#c0587a" />
                   ))}
                 </Bar>
                 <Bar dataKey="income" name="Ingresos" radius={[6, 6, 0, 0]}>
                   {evolutionChart.map((p) => (
-                    <Cell key={`i-${p.id}`} fill="#10b981" />
+                    <Cell key={`i-${p.id}`} fill="#5f9e80" />
                   ))}
                 </Bar>
               </BarChart>

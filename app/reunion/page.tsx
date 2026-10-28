@@ -270,7 +270,7 @@ export default async function ReunionPage({ searchParams }: { searchParams: Prom
             </article>
 
             <article className="card">
-              <span className="eyebrow">🔥 Dónde os pasasteis</span>
+              <span className="eyebrow">Dónde os pasasteis</span>
               {wentBad ? (
                 <ul className="review-list">
                   {review.budgetsOver.map((b) => (
@@ -311,7 +311,7 @@ export default async function ReunionPage({ searchParams }: { searchParams: Prom
                   ))}
                 </ul>
               ) : (
-                <p className="subtitle">Nada que destacar: ¡buen trabajo! 🎉</p>
+                <p className="subtitle">Nada que destacar: ¡buen trabajo!</p>
               )}
             </article>
           </section>
