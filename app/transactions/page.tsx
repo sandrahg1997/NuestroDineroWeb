@@ -7,7 +7,7 @@ export default async function TransactionsPage() {
   const { supabase, user, householdId, households, hideAmounts } = await getSessionContext();
   if (!user) redirect("/login");
   if (!householdId) redirect("/settings");
-  const [{ data: transactions }, { data: categories }, { data: rules }] = await Promise.all([
+  const [{ data: transactions }, { data: categories }, { data: rules }, { data: periods }] = await Promise.all([
     supabase
       .from("transactions")
       .select("*,category:categories(*)")
@@ -16,6 +16,11 @@ export default async function TransactionsPage() {
       .order("created_at", { ascending: false }),
     supabase.from("categories").select("*").eq("household_id", householdId).order("name"),
     supabase.from("merchant_category_rules").select("merchant_pattern,category_id").eq("household_id", householdId),
+    supabase
+      .from("periods")
+      .select("id,name,start_date,end_date")
+      .eq("household_id", householdId)
+      .order("start_date", { ascending: false }),
   ]);
   return (
     <AppShell households={households} hideAmounts={hideAmounts}>
@@ -26,6 +31,7 @@ export default async function TransactionsPage() {
         initial={(transactions ?? []) as any}
         initialCategories={(categories ?? []) as any}
         rules={(rules ?? []) as any}
+        periods={periods ?? []}
       />
     </AppShell>
   );

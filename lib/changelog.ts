@@ -12,7 +12,7 @@ export const changelog: ChangelogEntry[] = [
     date: "28 de octubre de 2026",
     items: [
       "Nuevo aspecto: OurMoney estrena icono (dos monedas en dorado sobre ciruela) y una estética más sobria y elegante en toda la app, en modo claro y oscuro. Si la tienes instalada en el iPhone, bórrala de la pantalla de inicio y vuelve a añadirla desde Safari para ver el icono nuevo.",
-      "Mejorado: el saldo de Inicio es más limpio y legible, con los céntimos en pequeño, y el rango de fechas se elige con atajos (Este mes, Mes pasado, Últimos 30 días) o desde «Fechas…».",
+      "Mejorado: el saldo de Inicio es más limpio y legible, con los céntimos en pequeño. Arriba eliges qué periodo ver (con las flechas o tocando su nombre) sin cambiar el periodo activo de los dos, y la comparación de gasto es con el periodo anterior.",
       "Mejorado: gráficos y barras de presupuesto con colores más suaves y sin brillos.",
     ],
   },

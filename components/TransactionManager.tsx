@@ -25,6 +25,7 @@ type Form = {
 };
 
 const PAGE_SIZE = 50;
+const NO_PERIODS: { id: string; name: string; start_date: string; end_date: string }[] = [];
 
 const blank = (type: TransactionType = "expense"): Form => ({
   concept: "",
@@ -43,12 +44,14 @@ export default function TransactionManager({
   initial,
   initialCategories,
   rules = [],
+  periods = NO_PERIODS,
 }: {
   householdId: string;
   userId: string;
   initial: Transaction[];
   initialCategories: Category[];
   rules?: MerchantRule[];
+  periods?: { id: string; name: string; start_date: string; end_date: string }[];
 }) {
   const [rows, setRows] = useState(initial);
   const [categories] = useState(initialCategories);
@@ -79,14 +82,15 @@ export default function TransactionManager({
   useEffect(() => {
     const t = params.get("type");
     const c = params.get("category");
-    const from = params.get("from");
-    const to = params.get("to");
+    const period = periods.find((p) => p.id === params.get("period"));
+    const from = period?.start_date ?? params.get("from");
+    const to = period?.end_date ?? params.get("to");
     if (t === "expense" || t === "income") setType(t);
     if (c) setCategory(c);
     if (from) setDateFrom(from);
     if (to) setDateTo(to);
     if (t || c || from || to) setFiltersOpen(true);
-  }, [params]);
+  }, [params, periods]);
 
   useEffect(() => {
     if (!menuFor) return;
@@ -116,7 +120,10 @@ export default function TransactionManager({
     setVisible(PAGE_SIZE);
   }, [debouncedQuery, type, category, dateFrom, dateTo, sort]);
 
-  const activeFilterCount = [type !== "all", !!category, !!dateFrom, !!dateTo].filter(Boolean).length;
+  const activeFilterCount = [type !== "all", !!category, !!(dateFrom || dateTo)].filter(Boolean).length;
+  // El periodo no es un filtro aparte: rellena Desde/Hasta y se reconoce por ellas.
+  const selectedPeriod = periods.find((p) => p.start_date === dateFrom && p.end_date === dateTo);
+  const periodValue = selectedPeriod?.id ?? (dateFrom || dateTo ? "custom" : "");
 
   function clearFilters() {
     setType("all");
@@ -378,6 +385,31 @@ export default function TransactionManager({
             </option>
           ))}
         </select>
+        {periods.length > 0 && (
+          <select
+            className="select"
+            style={{ width: "100%" }}
+            aria-label="Periodo"
+            value={periodValue}
+            onChange={(e) => {
+              const p = periods.find((x) => x.id === e.target.value);
+              setDateFrom(p?.start_date ?? "");
+              setDateTo(p?.end_date ?? "");
+            }}
+          >
+            <option value="">Cualquier periodo</option>
+            {periods.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+            {periodValue === "custom" && (
+              <option value="custom" disabled>
+                Fechas personalizadas
+              </option>
+            )}
+          </select>
+        )}
         <div className="field">
           <label>Desde</label>
           <input className="input" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />

@@ -1,15 +1,15 @@
 import AppShell from "@/components/AppShell";
 import DashboardChartsLoader from "@/components/DashboardChartsLoader";
-import DashboardRange from "@/components/DashboardRange";
 import InsightCarousel, { type Insight } from "@/components/InsightCarousel";
 import HeroMark from "@/components/HeroMark";
 import Money from "@/components/Money";
+import PeriodPicker from "@/components/PeriodPicker";
 import PageHeader from "@/components/PageHeader";
 import { challengeProgress, type Challenge } from "@/lib/challenges";
 import { getSessionContext } from "@/lib/data";
 import { computeForecast } from "@/lib/forecast";
 import { computePeriodSummary } from "@/lib/period-summary";
-import type { Frequency } from "@/lib/types";
+import type { Frequency, Period } from "@/lib/types";
 import {
   categoryColor,
   dateKey,
@@ -24,62 +24,45 @@ import { ArrowDownRight, ArrowUpRight, PiggyBank, Plus, ReceiptText } from "luci
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-const isIsoDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
-
-async function saveDashboardRange(formData: FormData) {
-  "use server";
-  const from = String(formData.get("from") ?? "");
-  const to = String(formData.get("to") ?? "");
-  if (!isIsoDate(from) || !isIsoDate(to)) redirect("/dashboard");
-
-  const { supabase, householdId, activePeriod } = await getSessionContext();
-  if (householdId) {
-    if (activePeriod) {
-      // El periodo activo es único y controlado por el usuario: editar las fechas
-      // en Inicio modifica ESE periodo, nunca crea uno nuevo ni depende del día de hoy.
-      await supabase.from("periods").update({ start_date: from, end_date: to }).eq("id", activePeriod.id);
-    } else {
-      const { data: created } = await supabase
-        .from("periods")
-        .insert({ household_id: householdId, name: defaultPeriodName(from, to), start_date: from, end_date: to })
-        .select("id")
-        .single();
-      if (created?.id) {
-        await supabase.from("households").update({ active_period_id: created.id }).eq("id", householdId);
-      }
-    }
-  }
-  redirect("/dashboard");
-}
-
 function percentChange(current: number, previous: number) {
   if (previous === 0) return current === 0 ? 0 : 100;
   return ((current - previous) / previous) * 100;
 }
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
+  const { period: requested } = await searchParams;
   const { supabase, user, householdId, households, activePeriod, hideAmounts } = await getSessionContext();
   if (!user) redirect("/login");
   if (!householdId) redirect("/settings");
 
-  // Sin periodo activo (p.ej. se borraron todos): mostrar el mes natural actual
-  // por defecto hasta que el usuario pulse "Aplicar", momento en que se crea uno.
+  const { data: periodData } = await supabase
+    .from("periods")
+    .select("id,household_id,name,start_date,end_date,created_at")
+    .eq("household_id", householdId)
+    .order("start_date", { ascending: false });
+  const periods = (periodData ?? []) as Period[];
+  // ?period=… solo cambia lo que se ve; por defecto, el periodo activo del hogar.
+  const viewed = periods.find((p) => p.id === requested) ?? activePeriod ?? periods[0] ?? null;
+
+  // Sin ningún periodo: el mes natural actual hasta que se cree uno en Periodos.
   const defaultStart = monthKey();
   const currentStart = new Date(`${defaultStart}T12:00:00`);
   const defaultEnd = dateKey(new Date(currentStart.getFullYear(), currentStart.getMonth() + 1, 0));
 
-  const selectedStart = activePeriod?.start_date ?? defaultStart;
-  const selectedEnd = activePeriod?.end_date ?? defaultEnd;
-  const periodId = activePeriod?.id ?? null;
-  const periodLabel = activePeriod?.name ?? defaultPeriodName(selectedStart, selectedEnd);
+  const selectedStart = viewed?.start_date ?? defaultStart;
+  const selectedEnd = viewed?.end_date ?? defaultEnd;
+  const periodId = viewed?.id ?? null;
+  const periodLabel = viewed?.name ?? defaultPeriodName(selectedStart, selectedEnd);
 
+  // Comparación con el periodo anterior de verdad; si no lo hay, con los mismos
+  // días justo antes.
+  const previousPeriod = periods.find((p) => p.start_date < selectedStart);
   const rangeStart = new Date(`${selectedStart}T12:00:00`);
   const rangeEnd = new Date(`${selectedEnd}T12:00:00`);
   const rangeDays = Math.max(1, Math.round((rangeEnd.getTime() - rangeStart.getTime()) / 86400000) + 1);
-  const previousStartDate = new Date(rangeStart.getTime() - rangeDays * 86400000);
-  const previousEndDate = new Date(rangeStart.getTime() - 86400000);
-  const previousStart = previousStartDate.toISOString().slice(0, 10);
-  const previousEnd = previousEndDate.toISOString().slice(0, 10);
+  const previousStart =
+    previousPeriod?.start_date ?? new Date(rangeStart.getTime() - rangeDays * 86400000).toISOString().slice(0, 10);
+  const previousEnd = previousPeriod?.end_date ?? new Date(rangeStart.getTime() - 86400000).toISOString().slice(0, 10);
 
   const todayKey = dateKey();
   const [summary, { data: previousTx }, { data: activeRecurring }, { data: activeChallenges }] = await Promise.all([
@@ -187,12 +170,12 @@ export default async function Dashboard() {
   const insights: Insight[] = [];
 
   // Periodo cerrado o a punto de cerrarse: toca revisarlo juntos.
-  if (activePeriod && (!periodInProgress || daysLeft <= 2) && todayKey >= selectedStart) {
+  if (viewed && (!periodInProgress || daysLeft <= 2) && todayKey >= selectedStart) {
     insights.push({
       icon: "🤝",
       title: "Toca la reunión del mes",
       text: `Revisad juntos "${periodLabel}": qué fue bien, dónde os pasasteis y qué acordáis para el siguiente.`,
-      href: `/reunion?period=${activePeriod.id}`,
+      href: `/reunion?period=${viewed.id}`,
     });
   }
   if (challengeInsight) insights.push(challengeInsight);
@@ -288,7 +271,11 @@ export default async function Dashboard() {
       <section className="dashboard-hero">
         <div className="hero-copy">
           <div className="dashboard-range-inline">
-            <DashboardRange action={saveDashboardRange} from={selectedStart} to={selectedEnd} />
+            <PeriodPicker
+              periods={periods.map((p) => ({ id: p.id, name: p.name }))}
+              value={periodId}
+              activeId={activePeriod?.id ?? null}
+            />
           </div>
           <p className="hero-label">Balance disponible</p>
           <h1 className={balance >= 0 ? "hero-balance positive" : "hero-balance negative"}>

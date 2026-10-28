@@ -177,6 +177,11 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
           <span className="eyebrow">Movimientos</span>
           <h2>Del periodo</h2>
         </div>
+        {rows.length > 0 && (
+          <Link href={`/transactions?period=${period.id}`} className="btn btn-soft">
+            Ver todos ({rows.length})
+          </Link>
+        )}
       </div>
 
       <div className="card recent-card">
@@ -206,6 +211,13 @@ export default async function PeriodDetail({ params }: { params: Promise<{ id: s
         })}
         {!rows.length && <div className="empty">No hay movimientos en este periodo.</div>}
       </div>
+      {rows.length > 12 && (
+        <div className="toolbar" style={{ justifyContent: "center", marginTop: 14 }}>
+          <Link href={`/transactions?period=${period.id}`} className="btn btn-soft">
+            Ver los {rows.length} movimientos
+          </Link>
+        </div>
+      )}
     </AppShell>
   );
 }

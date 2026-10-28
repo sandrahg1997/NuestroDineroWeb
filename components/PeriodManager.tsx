@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/client";
 import Money from "@/components/Money";
 import type { Period } from "@/lib/types";
 import { defaultPeriodName, formatDateEs } from "@/lib/utils";
-import { CalendarRange, LoaderCircle, Pencil, Plus, Star, Trash2, X } from "lucide-react";
+import { overlappingPeriods, overlapWarning } from "@/lib/periods";
+import { CalendarRange, LoaderCircle, Pencil, Plus, Star, Trash2, TriangleAlert, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useToast } from "./Toast";
@@ -48,9 +49,20 @@ export default function PeriodManager({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settingActiveId, setSettingActiveId] = useState<string | null>(null);
 
+  // Fechas al revés: error. Solape con otros periodos: se avisa y se pide confirmación.
+  async function checkRange(from: string, to: string, excludeId?: string) {
+    if (to < from) {
+      toast("La fecha «Hasta» no puede ser anterior a «Desde».", "error");
+      return false;
+    }
+    const warning = overlapWarning(overlappingPeriods(from, to, rows, excludeId));
+    return !warning || confirm(`${warning} ¿Guardar igualmente?`, { confirmLabel: "Guardar igualmente" });
+  }
+
   async function createPeriod(e: React.FormEvent) {
     e.preventDefault();
     if (!start || !end) return;
+    if (!(await checkRange(start, end))) return;
     setCreating(true);
     const s = createClient();
     const label = name.trim() || defaultPeriodName(start, end);
@@ -80,6 +92,8 @@ export default function PeriodManager({
   }
 
   async function saveEdit(id: string) {
+    if (!draft.start || !draft.end) return;
+    if (!(await checkRange(draft.start, draft.end, id))) return;
     setSavingEdit(true);
     const s = createClient();
     const { data, error } = await s
@@ -149,8 +163,8 @@ export default function PeriodManager({
           <CalendarRange size={20} /> Nuevo periodo
         </h2>
         <p className="subtitle">
-          Da igual la duración: pueden ser meses naturales, de nómina a nómina, o lo que necesites. Se pueden solapar
-          sin problema.
+          Da igual la duración: pueden ser meses naturales, de nómina a nómina, o lo que necesites. Lo ideal es que no
+          se solapen, para que cada movimiento cuente en un solo periodo.
         </p>
         <div className="form-grid" style={{ marginTop: 14 }}>
           <div className="field">
@@ -171,6 +185,7 @@ export default function PeriodManager({
             <input className="input" type="date" value={end} onChange={(e) => setEnd(e.target.value)} required />
           </div>
         </div>
+        <RangeWarning from={start} to={end} periods={rows} />
         <button className="btn btn-primary" style={{ marginTop: 16 }} disabled={creating}>
           {creating ? <LoaderCircle size={16} className="spin" /> : <Plus size={16} />}
           {creating ? "Creando…" : "Crear periodo"}
@@ -182,6 +197,7 @@ export default function PeriodManager({
           const isActive = p.id === activeId;
           const isEditing = editingId === p.id;
           const balance = p.income - p.expense;
+          const overlaps = overlappingPeriods(p.start_date, p.end_date, rows, p.id);
           return (
             <div className="card" key={p.id}>
               {isEditing ? (
@@ -214,6 +230,7 @@ export default function PeriodManager({
                       />
                     </div>
                   </div>
+                  <RangeWarning from={draft.start} to={draft.end} periods={rows} excludeId={p.id} />
                   <div className="toolbar" style={{ marginTop: 14, justifyContent: "flex-start" }}>
                     <button
                       type="button"
@@ -236,6 +253,11 @@ export default function PeriodManager({
                       <div className="chip-row" style={{ marginBottom: 4 }}>
                         <strong>{p.name}</strong>
                         {isActive && <span className="pill">Activo</span>}
+                        {overlaps.length > 0 && (
+                          <span className="pill pill-warn" title={overlapWarning(overlaps) ?? undefined}>
+                            <TriangleAlert size={12} /> Se solapa
+                          </span>
+                        )}
                       </div>
                       <div className="subtitle">
                         {formatDateEs(p.start_date)} – {formatDateEs(p.end_date)}
@@ -268,7 +290,10 @@ export default function PeriodManager({
                     </div>
                   </div>
                   <div className="toolbar" style={{ marginTop: 14, justifyContent: "flex-start" }}>
-                    <Link href={`/periods/${p.id}`} className="btn btn-soft">
+                    <Link href={`/transactions?period=${p.id}`} className="btn btn-soft">
+                      Ver movimientos
+                    </Link>
+                    <Link href={`/periods/${p.id}`} className="btn btn-ghost">
                       Ver resumen
                     </Link>
                     {!isActive && (
@@ -302,5 +327,29 @@ export default function PeriodManager({
         )}
       </div>
     </>
+  );
+}
+
+function RangeWarning({
+  from,
+  to,
+  periods,
+  excludeId,
+}: {
+  from: string;
+  to: string;
+  periods: Period[];
+  excludeId?: string;
+}) {
+  const message =
+    from && to && to < from
+      ? "La fecha «Hasta» es anterior a «Desde»."
+      : overlapWarning(overlappingPeriods(from, to, periods, excludeId));
+  if (!message) return null;
+  return (
+    <p className="period-warning" role="status">
+      <TriangleAlert size={15} />
+      {message}
+    </p>
   );
 }
