@@ -34,9 +34,9 @@ export default async function HistoricoPage() {
     <AppShell households={households} hideAmounts={hideAmounts}>
       <PageHeader title="Histórico" subtitle="Evolución de tus gastos e ingresos periodo a periodo." />
       <HistoricoChartsLoader
-        transactions={(transactions ?? []) as any}
-        categories={(categories ?? []) as any}
-        periods={(periods ?? []) as any}
+        transactions={transactions ?? []}
+        categories={categories ?? []}
+        periods={periods ?? []}
         hideAmounts={hideAmounts}
       />
     </AppShell>

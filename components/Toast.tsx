@@ -4,7 +4,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { X } from "lucide-react";
 
 type ToastKind = "info" | "error" | "success";
-type ToastItem = { id: number; message: string; kind: ToastKind };
+type ToastAction = { label: string; onClick: () => void };
+type ToastOptions = { action?: ToastAction; duration?: number };
+type ToastItem = { id: number; message: string; kind: ToastKind; action?: ToastAction };
 type ConfirmOptions = { confirmLabel?: string; cancelLabel?: string; danger?: boolean };
 type AskTextOptions = {
   placeholder?: string;
@@ -26,12 +28,30 @@ type ConfirmState =
   | null;
 
 type ToastApi = {
-  toast: (message: string, kind?: ToastKind) => void;
+  toast: (message: string, kind?: ToastKind, options?: ToastOptions) => void;
   confirm: (message: string, options?: ConfirmOptions) => Promise<boolean>;
   askText: (message: string, options?: AskTextOptions) => Promise<string | null>;
 };
 
 const ToastContext = createContext<ToastApi | null>(null);
+
+// Mantiene el Tab dentro de un diálogo modal (de último a primero y al revés).
+export function trapFocus(e: React.KeyboardEvent, container: HTMLElement | null) {
+  if (e.key !== "Tab" || !container) return;
+  const els = container.querySelectorAll<HTMLElement>(
+    "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])"
+  );
+  if (!els.length) return;
+  const first = els[0];
+  const last = els[els.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
 
 export function useToast(): ToastApi {
   const ctx = useContext(ToastContext);
@@ -44,15 +64,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [dialog, setDialog] = useState<ConfirmState>(null);
   const [textValue, setTextValue] = useState("");
   const idRef = useRef(0);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  // Elemento con el foco antes de abrir el diálogo, para devolvérselo al cerrar.
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
   const dismiss = useCallback((id: number) => setItems((prev) => prev.filter((t) => t.id !== id)), []);
 
   const toast = useCallback(
-    (message: string, kind: ToastKind = "info") => {
+    (message: string, kind: ToastKind = "info", options?: ToastOptions) => {
       const id = ++idRef.current;
-      setItems((prev) => [...prev, { id, message, kind }]);
+      setItems((prev) => [...prev, { id, message, kind, action: options?.action }]);
       // Los errores se quedan hasta que el usuario los cierra; el resto se van solos.
-      if (kind !== "error") setTimeout(() => dismiss(id), 4200);
+      if (kind !== "error") setTimeout(() => dismiss(id), options?.duration ?? 4200);
     },
     [dismiss]
   );
@@ -60,6 +83,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const confirm = useCallback(
     (message: string, options?: ConfirmOptions) =>
       new Promise<boolean>((resolve) => {
+        returnFocusRef.current = document.activeElement as HTMLElement | null;
         setDialog({
           kind: "confirm",
           message,
@@ -77,6 +101,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const askText = useCallback(
     (message: string, options?: AskTextOptions) =>
       new Promise<string | null>((resolve) => {
+        returnFocusRef.current = document.activeElement as HTMLElement | null;
         setTextValue(options?.defaultValue ?? "");
         setDialog({
           kind: "text",
@@ -115,6 +140,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [dialog, close]);
 
+  // Al cerrar el diálogo devolvemos el foco a donde estaba al abrirlo, para que
+  // teclado y lector de pantalla no "pierdan el sitio".
+  const isOpen = dialog !== null;
+  useEffect(() => {
+    if (isOpen) return;
+    returnFocusRef.current?.focus?.();
+    returnFocusRef.current = null;
+  }, [isOpen]);
+
   const textOk = dialog?.kind === "text" && (!dialog.opts.requireExact || textValue === dialog.opts.requireExact);
 
   return (
@@ -124,8 +158,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {items.length > 0 && (
         <div className="toast-stack" role="region" aria-live="polite">
           {items.map((t) => (
-            <div key={t.id} className={`toast-item ${t.kind}`}>
+            <div key={t.id} className={`toast-item ${t.kind}`} role={t.kind === "error" ? "alert" : undefined}>
               <span>{t.message}</span>
+              {t.action && (
+                <button
+                  type="button"
+                  className="toast-action"
+                  onClick={() => {
+                    t.action?.onClick();
+                    dismiss(t.id);
+                  }}
+                >
+                  {t.action.label}
+                </button>
+              )}
               <button type="button" className="toast-close" aria-label="Cerrar aviso" onClick={() => dismiss(t.id)}>
                 <X size={15} />
               </button>
@@ -140,7 +186,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             className="modal confirm-modal"
             role="alertdialog"
             aria-modal="true"
+            aria-label={dialog.message}
+            ref={dialogRef}
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => trapFocus(e, dialogRef.current)}
           >
             <p className="confirm-message">{dialog.message}</p>
 

@@ -2,6 +2,8 @@
 import { useRef, useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
+import type { TransactionType } from "@/lib/types";
+import type { Database } from "@/lib/database.types";
 import { Copy, Download, LoaderCircle, Plus, TriangleAlert, Upload, User, Users } from "lucide-react";
 import { useToast } from "./Toast";
 import { useRouter } from "next/navigation";
@@ -175,7 +177,7 @@ export default function SettingsManager({
         const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || "");
         return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : v;
       };
-      const rows = (data ?? []).map((r: any) => ({
+      const rows = (data ?? []).map((r) => ({
         Fecha: toDate(r.date),
         Tipo: r.type === "income" ? "Ingreso" : r.type === "expense" ? "Gasto" : r.type,
         Concepto: r.concept ?? "",
@@ -189,8 +191,8 @@ export default function SettingsManager({
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Movimientos");
       XLSX.writeFile(wb, `ourmoney-${new Date().toISOString().slice(0, 10)}.xlsx`);
-    } catch (err: any) {
-      toast(err?.message ?? "No se pudo exportar el Excel.", "error");
+    } catch (err) {
+      toast((err as Error)?.message || "No se pudo exportar el Excel.", "error");
     }
     setExporting(false);
   }
@@ -206,18 +208,18 @@ export default function SettingsManager({
         setImporting(false);
         return;
       }
-      const rows = XLSX.utils.sheet_to_json(ws, { defval: "" }) as Record<string, any>[];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: "" }) as Record<string, unknown>[];
       if (!rows.length) {
         toast("El Excel no tiene movimientos.", "error");
         setImporting(false);
         return;
       }
-      const pick = (r: Record<string, any>, ...keys: string[]) => {
+      const pick = (r: Record<string, unknown>, ...keys: string[]) => {
         for (const k of keys)
           for (const rk of Object.keys(r)) if (rk.trim().toLowerCase() === k.toLowerCase()) return r[rk];
         return "";
       };
-      const normDate = (v: any) => {
+      const normDate = (v: unknown) => {
         if (v instanceof Date && !isNaN(v.getTime())) {
           const p = (n: number) => String(n).padStart(2, "0");
           return `${v.getFullYear()}-${p(v.getMonth() + 1)}-${p(v.getDate())}`;
@@ -236,7 +238,7 @@ export default function SettingsManager({
         ingresos: "income",
       };
       const parsed: {
-        t: string;
+        t: TransactionType;
         concept: string;
         merchant: string;
         catName: string;
@@ -280,8 +282,8 @@ export default function SettingsManager({
         return;
       }
       const { data: cats } = await s.from("categories").select("id,name,type").eq("household_id", householdId);
-      const catMap = new Map((cats ?? []).map((c: any) => [`${c.type}|${c.name.trim().toLowerCase()}`, c.id]));
-      const payloads: any[] = [];
+      const catMap = new Map((cats ?? []).map((c) => [`${c.type}|${c.name.trim().toLowerCase()}`, c.id]));
+      const payloads: Database["public"]["Tables"]["transactions"]["Insert"][] = [];
       for (const p of parsed) {
         let category_id: string | null = null;
         const key = p.catName ? `${p.t}|${p.catName.toLowerCase()}` : "";
@@ -320,8 +322,8 @@ export default function SettingsManager({
         "success"
       );
       router.refresh();
-    } catch (err: any) {
-      toast(err?.message ?? "No se pudo importar el Excel.", "error");
+    } catch (err) {
+      toast((err as Error)?.message || "No se pudo importar el Excel.", "error");
       setImporting(false);
     }
   }
@@ -333,8 +335,9 @@ export default function SettingsManager({
         </h2>
         <p className="subtitle">Cuenta conectada: {email}</p>
         <div className="field" style={{ marginTop: 12 }}>
-          <label>Nombre para mostrar sin espacios</label>
+          <label htmlFor="settingsmanager-nombre-para-mostrar-sin-espaci">Nombre para mostrar sin espacios</label>
           <input
+            id="settingsmanager-nombre-para-mostrar-sin-espaci"
             className="input"
             value={name}
             onChange={(e) => {
@@ -346,7 +349,7 @@ export default function SettingsManager({
           />
         </div>
         <div className="toolbar" style={{ marginTop: 14, justifyContent: "flex-start" }}>
-          <button className="btn btn-primary" disabled={savingName}>
+          <button type="submit" className="btn btn-primary" disabled={savingName}>
             {savingName ? "Guardando…" : "Guardar nombre"}
           </button>
           {nameSaved && (
@@ -366,9 +369,10 @@ export default function SettingsManager({
           <Users size={20} /> Finanzas compartidas
         </h2>
         <form onSubmit={saveSpaceName} className="field" style={{ marginTop: 4 }}>
-          <label>Nombre de este espacio</label>
+          <label htmlFor="settingsmanager-nombre-de-este-espacio">Nombre de este espacio</label>
           <div className="toolbar">
             <input
+              id="settingsmanager-nombre-de-este-espacio"
               className="input"
               value={spaceName}
               onChange={(e) => {
@@ -377,7 +381,7 @@ export default function SettingsManager({
               }}
               required
             />
-            <button className="btn btn-soft" disabled={savingSpaceName}>
+            <button type="submit" className="btn btn-soft" disabled={savingSpaceName}>
               {savingSpaceName ? "Guardando…" : "Guardar"}
             </button>
           </div>
@@ -389,10 +393,11 @@ export default function SettingsManager({
         </form>
         <p className="subtitle">Cuenta conectada: {email}</p>
         <div className="field">
-          <label>Código para invitar a tu pareja</label>
+          <label htmlFor="settingsmanager-codigo-para-invitar-a-tu-parej">Código para invitar a tu pareja</label>
           <div className="toolbar">
-            <input className="input" readOnly value={inviteCode} />
+            <input id="settingsmanager-codigo-para-invitar-a-tu-parej" className="input" readOnly value={inviteCode} />
             <button
+              type="button"
               className="btn btn-soft"
               onClick={() =>
                 navigator.clipboard.writeText(inviteCode).then(
@@ -417,8 +422,9 @@ export default function SettingsManager({
           los demás.
         </p>
         <div className="field">
-          <label>Código de invitación</label>
+          <label htmlFor="settingsmanager-codigo-de-invitacion">Código de invitación</label>
           <input
+            id="settingsmanager-codigo-de-invitacion"
             className="input"
             value={joinCode}
             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
@@ -426,7 +432,7 @@ export default function SettingsManager({
             required
           />
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 14 }} disabled={joining}>
+        <button type="submit" className="btn btn-primary" style={{ marginTop: 14 }} disabled={joining}>
           {joining && <LoaderCircle size={16} className="spin" />}
           {joining ? "Uniendo…" : "Unirme"}
         </button>
@@ -436,7 +442,7 @@ export default function SettingsManager({
         <p className="subtitle">
           Crea un espacio solo para ti, separado del compartido, para tus gastos e ingresos personales.
         </p>
-        <button className="btn btn-soft" onClick={createPersonal} disabled={creating}>
+        <button type="button" className="btn btn-soft" onClick={createPersonal} disabled={creating}>
           {creating ? <LoaderCircle size={16} className="spin" /> : <Plus size={16} />}
           {creating ? "Creando…" : "Crear espacio personal"}
         </button>
@@ -449,7 +455,7 @@ export default function SettingsManager({
           Categoría, Nota).
         </p>
         <div className="toolbar" style={{ marginTop: 12, justifyContent: "flex-start" }}>
-          <button className="btn btn-soft" onClick={exportXlsx} disabled={exporting}>
+          <button type="button" className="btn btn-soft" onClick={exportXlsx} disabled={exporting}>
             {exporting ? <LoaderCircle size={16} className="spin" /> : <Download size={16} />}
             {exporting ? "Exportando…" : "Exportar Excel"}
           </button>
@@ -475,15 +481,15 @@ export default function SettingsManager({
           <TriangleAlert size={20} /> Zona de peligro
         </h2>
         <p className="subtitle">
-          Elimina el espacio "{householdName}" y todos sus movimientos, o tu cuenta entera. Exporta tu Excel antes si
+          Elimina el espacio «{householdName}» y todos sus movimientos, o tu cuenta entera. Exporta tu Excel antes si
           quieres conservar un histórico.
         </p>
         <div className="toolbar" style={{ justifyContent: "flex-start" }}>
-          <button className="btn btn-danger" onClick={deleteSpace} disabled={deletingSpace}>
+          <button type="button" className="btn btn-danger" onClick={deleteSpace} disabled={deletingSpace}>
             {deletingSpace ? <LoaderCircle size={16} className="spin" /> : <TriangleAlert size={16} />}
             {deletingSpace ? "Eliminando…" : "Eliminar este espacio"}
           </button>
-          <button className="btn btn-danger" onClick={deleteAccount} disabled={deletingAccount}>
+          <button type="button" className="btn btn-danger" onClick={deleteAccount} disabled={deletingAccount}>
             {deletingAccount ? <LoaderCircle size={16} className="spin" /> : <TriangleAlert size={16} />}
             {deletingAccount ? "Eliminando…" : "Eliminar mi cuenta"}
           </button>

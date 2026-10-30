@@ -26,6 +26,9 @@ jobs:
       - name: Formato (Prettier)
         run: npm run format:check
 
+      - name: Lint (ESLint)
+        run: npm run lint
+
       - name: Tipos (tsc)
         run: npm run typecheck
 

@@ -160,7 +160,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
   let challengeInsight: Insight | null = null;
   if (challenge) {
-    const progress = challengeProgress(challenge, challengeTx as any, todayKey);
+    const progress = challengeProgress(challenge, challengeTx, todayKey);
     challengeInsight = {
       icon: challenge.icon,
       title: challenge.title,
@@ -298,10 +298,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       </section>
 
       <div className="hero-add-row">
-        <Link href="/transactions?new=expense">
-          <button className="btn btn-primary hero-add" aria-label="Añadir gasto">
-            <Plus size={14} /> Añadir gasto
-          </button>
+        <Link href="/transactions?new=expense" className="btn btn-primary hero-add">
+          <Plus size={14} /> Añadir gasto
         </Link>
       </div>
 

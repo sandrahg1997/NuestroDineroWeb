@@ -34,7 +34,7 @@ export default async function Page() {
   return (
     <AppShell households={households} hideAmounts={hideAmounts}>
       <PageHeader title="Periodos" subtitle="Crea, edita y consulta el histórico de periodos de vuestro espacio." />
-      <PeriodManager householdId={householdId} initial={withSummary as any} activePeriodId={activePeriod?.id ?? null} />
+      <PeriodManager householdId={householdId} initial={withSummary} activePeriodId={activePeriod?.id ?? null} />
     </AppShell>
   );
 }

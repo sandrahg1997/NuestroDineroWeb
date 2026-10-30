@@ -150,20 +150,36 @@ export default function ScanReceipt({
         <h2>Revisar antes de guardar</h2>
         <p className="subtitle">El OCR propone los datos, pero tú tienes la última palabra.</p>
         <div className="field">
-          <label>Comercio / concepto</label>
-          <input className="input" value={merchant} onChange={(e) => setMerchant(e.target.value)} />
+          <label htmlFor="scanreceipt-comercio-concepto">Comercio / concepto</label>
+          <input
+            id="scanreceipt-comercio-concepto"
+            className="input"
+            value={merchant}
+            onChange={(e) => setMerchant(e.target.value)}
+          />
         </div>
         <div className="field" style={{ marginTop: 12 }}>
-          <label>Importe</label>
-          <MoneyInput value={amount} onChange={setAmount} />
+          <label htmlFor="scanreceipt-importe">Importe</label>
+          <MoneyInput id="scanreceipt-importe" value={amount} onChange={setAmount} />
         </div>
         <div className="field" style={{ marginTop: 12 }}>
-          <label>Fecha</label>
-          <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <label htmlFor="scanreceipt-fecha">Fecha</label>
+          <input
+            id="scanreceipt-fecha"
+            className="input"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
         </div>
         <div className="field" style={{ marginTop: 12 }}>
-          <label>Categoría sugerida</label>
-          <select className="select" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+          <label htmlFor="scanreceipt-categoria-sugerida">Categoría sugerida</label>
+          <select
+            id="scanreceipt-categoria-sugerida"
+            className="select"
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+          >
             <option value="">Sin categoría</option>
             {categories
               .filter((c) => c.type === "expense")
@@ -175,6 +191,7 @@ export default function ScanReceipt({
           </select>
         </div>
         <button
+          type="button"
           className="btn btn-primary"
           style={{ marginTop: 18, width: "100%" }}
           onClick={save}

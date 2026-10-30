@@ -8,7 +8,7 @@ import { overlappingPeriods, overlapWarning } from "@/lib/periods";
 import { fetchAll } from "@/lib/fetch-all";
 import { CalendarRange, LoaderCircle, Pencil, Plus, Star, Trash2, TriangleAlert, X } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "./Toast";
 
 type PeriodRow = Period & { expense: number; income: number };
@@ -43,6 +43,8 @@ export default function PeriodManager({
 }) {
   const { toast, confirm } = useToast();
   const [rows, setRows] = useState(initial);
+  // Datos nuevos del servidor (tiempo real o tirar para recargar): sustituyen a los locales.
+  useEffect(() => setRows(initial), [initial]);
   const [activeId, setActiveId] = useState(activePeriodId);
   const [name, setName] = useState("");
   const [start, setStart] = useState("");
@@ -173,8 +175,9 @@ export default function PeriodManager({
         </p>
         <div className="form-grid" style={{ marginTop: 14 }}>
           <div className="field">
-            <label>Nombre (opcional)</label>
+            <label htmlFor="periodmanager-nombre-opcional">Nombre (opcional)</label>
             <input
+              id="periodmanager-nombre-opcional"
               className="input"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -182,16 +185,30 @@ export default function PeriodManager({
             />
           </div>
           <div className="field">
-            <label>Desde</label>
-            <input className="input" type="date" value={start} onChange={(e) => setStart(e.target.value)} required />
+            <label htmlFor="periodmanager-desde">Desde</label>
+            <input
+              id="periodmanager-desde"
+              className="input"
+              type="date"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+              required
+            />
           </div>
           <div className="field">
-            <label>Hasta</label>
-            <input className="input" type="date" value={end} onChange={(e) => setEnd(e.target.value)} required />
+            <label htmlFor="periodmanager-hasta">Hasta</label>
+            <input
+              id="periodmanager-hasta"
+              className="input"
+              type="date"
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+              required
+            />
           </div>
         </div>
         <RangeWarning from={start} to={end} periods={rows} />
-        <button className="btn btn-primary" style={{ marginTop: 16 }} disabled={creating}>
+        <button type="submit" className="btn btn-primary" style={{ marginTop: 16 }} disabled={creating}>
           {creating ? <LoaderCircle size={16} className="spin" /> : <Plus size={16} />}
           {creating ? "Creando…" : "Crear periodo"}
         </button>
@@ -209,16 +226,18 @@ export default function PeriodManager({
                 <>
                   <div className="form-grid">
                     <div className="field">
-                      <label>Nombre</label>
+                      <label htmlFor="periodmanager-nombre">Nombre</label>
                       <input
+                        id="periodmanager-nombre"
                         className="input"
                         value={draft.name}
                         onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                       />
                     </div>
                     <div className="field">
-                      <label>Desde</label>
+                      <label htmlFor="periodmanager-desde-2">Desde</label>
                       <input
+                        id="periodmanager-desde-2"
                         className="input"
                         type="date"
                         value={draft.start}
@@ -226,8 +245,9 @@ export default function PeriodManager({
                       />
                     </div>
                     <div className="field">
-                      <label>Hasta</label>
+                      <label htmlFor="periodmanager-hasta-2">Hasta</label>
                       <input
+                        id="periodmanager-hasta-2"
                         className="input"
                         type="date"
                         value={draft.end}
@@ -269,10 +289,16 @@ export default function PeriodManager({
                       </div>
                     </div>
                     <div className="chip-row">
-                      <button type="button" className="btn btn-ghost" onClick={() => startEdit(p)}>
+                      <button
+                        aria-label={`Editar ${p.name}`}
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => startEdit(p)}
+                      >
                         <Pencil size={16} />
                       </button>
                       <button
+                        aria-label={`Eliminar ${p.name}`}
                         type="button"
                         className="btn btn-ghost expense"
                         onClick={() => removePeriod(p.id)}

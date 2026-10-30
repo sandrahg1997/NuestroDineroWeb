@@ -62,8 +62,9 @@ export default function ResetPasswordPage() {
           <form onSubmit={submit}>
             <p className="subtitle">Elige la contraseña con la que quieres entrar a partir de ahora.</p>
             <div className="field" style={{ marginTop: 14 }}>
-              <label>Nueva contraseña</label>
+              <label htmlFor="reset-password-nueva-contrasena">Nueva contraseña</label>
               <input
+                id="reset-password-nueva-contrasena"
                 className="input"
                 type="password"
                 minLength={6}
@@ -74,8 +75,9 @@ export default function ResetPasswordPage() {
               />
             </div>
             <div className="field" style={{ marginTop: 14 }}>
-              <label>Repite la contraseña</label>
+              <label htmlFor="reset-password-repite-la-contrasena">Repite la contraseña</label>
               <input
+                id="reset-password-repite-la-contrasena"
                 className="input"
                 type="password"
                 minLength={6}
@@ -87,7 +89,12 @@ export default function ResetPasswordPage() {
 
             {error && <p className="expense">{error}</p>}
 
-            <button className="btn btn-primary" style={{ width: "100%", marginTop: 18 }} disabled={loading}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ width: "100%", marginTop: 18 }}
+              disabled={loading}
+            >
               {loading ? "Guardando…" : "Guardar contraseña"}
             </button>
           </form>

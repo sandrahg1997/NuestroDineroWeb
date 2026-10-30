@@ -1,8 +1,16 @@
 import AppShell from "@/components/AppShell";
 import ChallengeManager from "@/components/ChallengeManager";
 import PageHeader from "@/components/PageHeader";
-import { BASELINE_DAYS, baselineDaily, challengeProgress, challengeStreak, type Challenge } from "@/lib/challenges";
+import {
+  BASELINE_DAYS,
+  baselineDaily,
+  challengeProgress,
+  challengeStreak,
+  type Challenge,
+  type ChallengeTx,
+} from "@/lib/challenges";
 import { getSessionContext } from "@/lib/data";
+import { fetchAll } from "@/lib/fetch-all";
 import type { Category } from "@/lib/types";
 import { dateKey } from "@/lib/utils";
 import { redirect } from "next/navigation";
@@ -26,18 +34,22 @@ export default async function RetosPage() {
 
   // Movimientos desde 8 semanas antes del reto más antiguo, para la línea base
   // ("lo que habríais gastado") de cada reto.
-  let txs: any[] = [];
+  let txs: ChallengeTx[] = [];
   if (challenges.length) {
     const oldest = challenges[challenges.length - 1].start_date;
-    const from = new Date(`${oldest}T12:00:00`);
-    from.setDate(from.getDate() - BASELINE_DAYS);
-    const { data } = await supabase
-      .from("transactions")
-      .select("type,amount,date,concept,merchant,category_id,recurring_id")
-      .eq("household_id", householdId)
-      .eq("type", "expense")
-      .gte("date", dateKey(from))
-      .lte("date", today);
+    const since = new Date(`${oldest}T12:00:00`);
+    since.setDate(since.getDate() - BASELINE_DAYS);
+    const { data } = await fetchAll((from, to) =>
+      supabase
+        .from("transactions")
+        .select("type,amount,date,concept,merchant,category_id,recurring_id")
+        .eq("household_id", householdId)
+        .eq("type", "expense")
+        .gte("date", dateKey(since))
+        .lte("date", today)
+        .order("id")
+        .range(from, to)
+    );
     txs = data ?? [];
   }
 

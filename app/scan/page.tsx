@@ -14,12 +14,7 @@ export default async function Page() {
   return (
     <AppShell households={households} hideAmounts={hideAmounts}>
       <PageHeader title="Escanear ticket" subtitle="OCR en el navegador, con revisión manual antes de guardar." />
-      <ScanReceipt
-        householdId={householdId}
-        userId={user.id}
-        categories={(data ?? []) as any}
-        rules={(rules ?? []) as any}
-      />
+      <ScanReceipt householdId={householdId} userId={user.id} categories={data ?? []} rules={rules ?? []} />
     </AppShell>
   );
 }

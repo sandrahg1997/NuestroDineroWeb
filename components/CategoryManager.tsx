@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Category, TransactionType } from "@/lib/types";
 import { LoaderCircle, Plus, Trash2 } from "lucide-react";
@@ -8,6 +8,8 @@ const icons = ["🛒", "🍽️", "🏠", "🚗", "🎮", "🩺", "👕", "✈�
 export default function CategoryManager({ householdId, initial }: { householdId: string; initial: Category[] }) {
   const { toast, confirm } = useToast();
   const [rows, setRows] = useState(initial);
+  // Datos nuevos del servidor (tiempo real o tirar para recargar): sustituyen a los locales.
+  useEffect(() => setRows(initial), [initial]);
   const [name, setName] = useState("");
   const [type, setType] = useState<TransactionType>("expense");
   const [icon, setIcon] = useState("📦");
@@ -52,27 +54,44 @@ export default function CategoryManager({ householdId, initial }: { householdId:
       <form className="card" onSubmit={add}>
         <h2>Nueva categoría</h2>
         <div className="field">
-          <label>Nombre</label>
-          <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
+          <label htmlFor="categorymanager-nombre">Nombre</label>
+          <input
+            id="categorymanager-nombre"
+            className="input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
         </div>
         <div className="field" style={{ marginTop: 12 }}>
-          <label>Tipo</label>
-          <select className="select" value={type} onChange={(e) => setType(e.target.value as TransactionType)}>
+          <label htmlFor="categorymanager-tipo">Tipo</label>
+          <select
+            id="categorymanager-tipo"
+            className="select"
+            value={type}
+            onChange={(e) => setType(e.target.value as TransactionType)}
+          >
             <option value="expense">Gasto</option>
             <option value="income">Ingreso</option>
           </select>
         </div>
         <div className="field" style={{ marginTop: 12 }}>
-          <label>Icono</label>
-          <div className="chip-row">
+          <label id="categorymanager-icono">Icono</label>
+          <div className="chip-row" role="group" aria-labelledby="categorymanager-icono">
             {icons.map((i) => (
-              <button type="button" key={i} className={`chip ${icon === i ? "active" : ""}`} onClick={() => setIcon(i)}>
+              <button
+                type="button"
+                key={i}
+                className={`chip ${icon === i ? "active" : ""}`}
+                aria-pressed={icon === i}
+                onClick={() => setIcon(i)}
+              >
                 {i}
               </button>
             ))}
           </div>
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 18 }} disabled={saving}>
+        <button type="submit" className="btn btn-primary" style={{ marginTop: 18 }} disabled={saving}>
           <Plus size={16} />
           {saving ? "Creando…" : "Crear"}
         </button>
@@ -101,6 +120,8 @@ export default function CategoryManager({ householdId, initial }: { householdId:
                 </div>
               </div>
               <button
+                aria-label={`Eliminar categoría ${c.name}`}
+                type="button"
                 className="btn btn-ghost expense"
                 onClick={() => remove(c)}
                 disabled={c.is_default || deletingId === c.id}

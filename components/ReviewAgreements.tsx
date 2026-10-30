@@ -58,7 +58,7 @@ export default function ReviewAgreements({
         }
       />
       <div className="toolbar" style={{ marginTop: 12, justifyContent: "flex-start" }}>
-        <button className="btn btn-primary" disabled={saving}>
+        <button type="submit" className="btn btn-primary" disabled={saving}>
           {saving && <LoaderCircle size={16} className="spin" />}
           {saving ? "Guardando…" : "Guardar acuerdos"}
         </button>

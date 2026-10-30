@@ -8,6 +8,7 @@ export default function LogoutButton() {
   const { toast } = useToast();
   return (
     <button
+      type="button"
       className="btn btn-soft"
       disabled={leaving}
       onClick={async () => {

@@ -21,7 +21,7 @@ export default async function Page() {
         title="Movimientos recurrentes"
         subtitle="Hipoteca, nómina, suscripciones y otros movimientos automáticos."
       />
-      <RecurringManager householdId={householdId} initial={(r ?? []) as any} categories={(c ?? []) as any} />
+      <RecurringManager householdId={householdId} initial={r ?? []} categories={c ?? []} />
     </AppShell>
   );
 }

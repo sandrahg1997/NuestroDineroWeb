@@ -59,7 +59,7 @@ export default function DashboardCharts({
                     paddingAngle={4}
                     stroke="none"
                     style={{ cursor: "pointer" }}
-                    onClick={(entry: any) => {
+                    onClick={(entry: { payload?: { categoryId?: string | null }; categoryId?: string | null }) => {
                       const categoryId = entry?.payload?.categoryId ?? entry?.categoryId ?? null;
                       router.push(categoryHref(categoryId));
                     }}

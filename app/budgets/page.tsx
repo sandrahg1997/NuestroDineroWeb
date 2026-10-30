@@ -40,8 +40,8 @@ export default async function Page() {
         householdId={householdId}
         periodId={activePeriod.id}
         periodLabel={activePeriod.name}
-        initial={(b ?? []) as any}
-        categories={(c ?? []) as any}
+        initial={b ?? []}
+        categories={c ?? []}
         spending={spending}
       />
     </AppShell>

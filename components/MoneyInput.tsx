@@ -8,12 +8,13 @@ type Props = {
   required?: boolean;
   placeholder?: string;
   autoFocus?: boolean;
+  id?: string;
 };
 
 // Campo de importe: muestra el símbolo € y, al salir del campo, normaliza a
 // dos decimales con coma (12.5 → "12,50"). Deja el texto intacto si no es válido.
 const MoneyInput = forwardRef<HTMLInputElement, Props>(function MoneyInput(
-  { value, onChange, required, placeholder, autoFocus },
+  { value, onChange, required, placeholder, autoFocus, id },
   ref
 ) {
   return (
@@ -21,6 +22,7 @@ const MoneyInput = forwardRef<HTMLInputElement, Props>(function MoneyInput(
       <span aria-hidden="true">€</span>
       <input
         ref={ref}
+        id={id}
         className="input"
         inputMode="decimal"
         value={value}

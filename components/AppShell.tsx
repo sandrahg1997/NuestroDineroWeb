@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { HouseholdOption } from "@/lib/data";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { type ReactNode, useState, useTransition } from "react";
+import { type ReactNode, useEffect, useState, useTransition } from "react";
 import {
   LayoutDashboard,
   ReceiptText,
@@ -21,11 +21,13 @@ import {
   Eye,
   EyeOff,
   Handshake,
+  LoaderCircle,
   Trophy,
 } from "lucide-react";
 import WhatsNewModal from "./WhatsNewModal";
 import { useToast } from "./Toast";
 import ThemeToggle from "./ThemeToggle";
+import { useHouseholdRealtime } from "@/lib/useHouseholdRealtime";
 
 const items = [
   ["/dashboard", LayoutDashboard, "Inicio"],
@@ -40,6 +42,9 @@ const items = [
   ["/retos", Trophy, "Retos"],
   ["/settings", Settings, "Ajustes"],
 ] as const;
+
+// Distancia (ya amortiguada) que hay que tirar hacia abajo para recargar.
+const PULL_THRESHOLD = 64;
 
 function householdLabel(h: HouseholdOption) {
   if (h.member_count > 1) return h.partner_email ? `${h.name} · con ${h.partner_email.split("@")[0]}` : h.name;
@@ -66,6 +71,59 @@ export default function AppShell({
   const switching = saving || refreshing;
   const [hidden, setHidden] = useState(hideAmounts);
   const [savingHidden, setSavingHidden] = useState(false);
+  const [pull, setPull] = useState(0);
+  const [pullRefreshing, startPullRefresh] = useTransition();
+  const [, startLiveRefresh] = useTransition();
+
+  // Cambios de la otra persona (u otro dispositivo) en tiempo real: se vuelven a
+  // pedir los datos de la página actual sin recargarla.
+  const activeHouseholdId = households.find((h) => h.is_active)?.household_id ?? households[0]?.household_id ?? null;
+  useHouseholdRealtime(activeHouseholdId, () => startLiveRefresh(() => router.refresh()));
+
+  // Tirar hacia abajo desde arriba del todo para recargar (gesto habitual en móvil).
+  useEffect(() => {
+    let startX = 0;
+    let startY = 0;
+    let distance = 0;
+    let tracking = false;
+    const onStart = (e: TouchEvent) => {
+      // Solo arriba del todo y sin un modal abierto encima.
+      if (window.scrollY > 0 || document.querySelector(".modal-backdrop")) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      distance = 0;
+      tracking = true;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!tracking) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      // Un gesto horizontal (p. ej. deslizar un movimiento) no es "tirar para recargar".
+      if (dy <= 0 || Math.abs(dx) > Math.abs(dy) || window.scrollY > 0) {
+        tracking = false;
+        setPull(0);
+        return;
+      }
+      distance = Math.min(dy * 0.5, 90);
+      setPull(distance);
+    };
+    const onEnd = () => {
+      if (!tracking) return;
+      tracking = false;
+      if (distance >= PULL_THRESHOLD) startPullRefresh(() => router.refresh());
+      setPull(0);
+    };
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchmove", onMove, { passive: true });
+    window.addEventListener("touchend", onEnd);
+    window.addEventListener("touchcancel", onEnd);
+    return () => {
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+      window.removeEventListener("touchcancel", onEnd);
+    };
+  }, [router]);
 
   const primary = items.slice(0, 4);
   const secondary = items.slice(4);
@@ -118,6 +176,20 @@ export default function AppShell({
   return (
     <div className={`shell ${hidden ? "hide-amounts" : ""}`}>
       <WhatsNewModal />
+      {(pull > 0 || pullRefreshing) && (
+        <div
+          className="pull-indicator"
+          role="status"
+          aria-label={pullRefreshing ? "Actualizando…" : "Suelta para actualizar"}
+          style={{ transform: `translate(-50%, ${pullRefreshing ? PULL_THRESHOLD : pull}px)` }}
+        >
+          <LoaderCircle
+            size={20}
+            className={pullRefreshing ? "spin" : undefined}
+            style={pullRefreshing ? undefined : { transform: `rotate(${pull * 4}deg)`, opacity: pull / PULL_THRESHOLD }}
+          />
+        </div>
+      )}
       <aside className="sidebar">
         <div className="brand">
           <span className="brandmark">

@@ -46,20 +46,34 @@ export default function LoginPage() {
 
         {mode === "signup" && (
           <div className="field">
-            <label>Nombre</label>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
+            <label htmlFor="login-nombre">Nombre</label>
+            <input
+              id="login-nombre"
+              className="input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
           </div>
         )}
 
         <div className="field" style={{ marginTop: 14 }}>
-          <label>Email</label>
-          <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <label htmlFor="login-email">Email</label>
+          <input
+            id="login-email"
+            className="input"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
         </div>
 
         <div className="field" style={{ marginTop: 14 }}>
-          <label>Contraseña</label>
+          <label htmlFor="login-contrasena">Contraseña</label>
           <div style={{ position: "relative" }}>
             <input
+              id="login-contrasena"
               className="input"
               type={showPassword ? "text" : "password"}
               minLength={6}
@@ -92,7 +106,7 @@ export default function LoginPage() {
 
         {error && <p className="expense">{error}</p>}
 
-        <button className="btn btn-primary" style={{ width: "100%", marginTop: 18 }} disabled={loading}>
+        <button type="submit" className="btn btn-primary" style={{ width: "100%", marginTop: 18 }} disabled={loading}>
           {loading ? "Un momento…" : mode === "login" ? "Entrar" : "Crear cuenta"}
         </button>
 

@@ -11,7 +11,8 @@ export interface Category {
 export interface Transaction {
   id: string;
   household_id: string;
-  user_id: string;
+  // null si la persona que lo creó borró su cuenta.
+  user_id: string | null;
   concept: string;
   amount: number;
   date: string;

@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Period } from "@/lib/types";
 
+// Forma del JSON que devuelve el RPC get_session_bootstrap.
+type SessionBootstrap = { households?: HouseholdOption[]; hide_amounts?: boolean; active_period?: Period | null };
+
 export type HouseholdOption = {
   household_id: string;
   name: string;
@@ -33,9 +36,10 @@ export async function getSessionContext() {
   let activePeriod: Period | null = null;
 
   if (!error && boot) {
-    households = (boot.households ?? []) as HouseholdOption[];
-    hideAmounts = Boolean(boot.hide_amounts);
-    activePeriod = (boot.active_period as Period | null) ?? null;
+    const b = boot as SessionBootstrap;
+    households = b.households ?? [];
+    hideAmounts = Boolean(b.hide_amounts);
+    activePeriod = b.active_period ?? null;
   } else {
     // Fallback si la BD aún no tiene la función get_session_bootstrap.
     const [{ data: householdsData }, { data: prefs }] = await Promise.all([

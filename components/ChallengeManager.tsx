@@ -11,6 +11,7 @@ import {
   type ChallengeTemplate,
 } from "@/lib/challenges";
 import type { Category } from "@/lib/types";
+import type { Database } from "@/lib/database.types";
 import { formatDateEs } from "@/lib/utils";
 import { Flame, LoaderCircle, Plus, Trash2, Trophy, X } from "lucide-react";
 import Money from "./Money";
@@ -18,6 +19,7 @@ import MoneyInput from "./MoneyInput";
 import { useToast } from "./Toast";
 
 type Item = { challenge: Challenge; progress: ChallengeProgress };
+type ChallengeInsert = Database["public"]["Tables"]["challenges"]["Insert"];
 
 const STATUS_LABEL: Record<ChallengeProgress["status"], { text: string; className: string }> = {
   upcoming: { text: "Empieza pronto", className: "neutral" },
@@ -42,7 +44,7 @@ export default function ChallengeManager({
   householdId,
   userId,
   today,
-  items,
+  items: serverItems,
   categories,
   streak,
   won,
@@ -64,6 +66,9 @@ export default function ChallengeManager({
   const busy = saving ?? (refreshing ? refreshKey : null);
   const [custom, setCustom] = useState<ReturnType<typeof blankCustom> | null>(null);
 
+  // Retos quitados en esta pantalla: desaparecen al momento, sin esperar a la recarga.
+  const [removedIds, setRemovedIds] = useState<Set<string>>(() => new Set());
+  const items = serverItems.filter((i) => !removedIds.has(i.challenge.id));
   const live = items.filter((i) => ["active", "broken", "upcoming"].includes(i.progress.status));
   const history = items.filter((i) => i.progress.status === "won" || i.progress.status === "lost");
   const totalSaved = items
@@ -80,7 +85,7 @@ export default function ChallengeManager({
     startRefresh(() => router.refresh());
   }
 
-  async function insert(key: string, row: Omit<Challenge, "id" | "household_id" | "created_at">) {
+  async function insert(key: string, row: Omit<ChallengeInsert, "household_id" | "created_by">) {
     const s = createClient();
     const { error } = await s.from("challenges").insert({ ...row, household_id: householdId, created_by: userId });
     if (error) {
@@ -154,12 +159,22 @@ export default function ChallengeManager({
       ))
     )
       return;
-    setBusy(item.challenge.id);
+    const id = item.challenge.id;
+    setRemovedIds((prev) => new Set(prev).add(id));
     const s = createClient();
-    const { error } = await s.from("challenges").delete().eq("id", item.challenge.id);
-    if (error) toast(error.message, "error");
-    else refresh(item.challenge.id);
-    setBusy(null);
+    const { error } = await s.from("challenges").delete().eq("id", id);
+    if (error) {
+      // Vuelve a aparecer si el servidor no lo ha borrado.
+      setRemovedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      toast(error.message, "error");
+      return;
+    }
+    // Recarga para recalcular la racha y el ahorro total con el reto ya fuera.
+    refresh(id);
   }
 
   return (
@@ -236,8 +251,9 @@ export default function ChallengeManager({
           </div>
           <div className="form-grid">
             <div className="field">
-              <label>Nombre</label>
+              <label htmlFor="challengemanager-nombre">Nombre</label>
               <input
+                id="challengemanager-nombre"
                 className="input"
                 value={custom.title}
                 onChange={(e) => setCustom({ ...custom, title: e.target.value })}
@@ -246,8 +262,9 @@ export default function ChallengeManager({
               />
             </div>
             <div className="field">
-              <label>Emoji</label>
+              <label htmlFor="challengemanager-emoji">Emoji</label>
               <input
+                id="challengemanager-emoji"
                 className="input"
                 value={custom.icon}
                 maxLength={4}
@@ -255,8 +272,9 @@ export default function ChallengeManager({
               />
             </div>
             <div className="field">
-              <label>Tipo</label>
+              <label htmlFor="challengemanager-tipo">Tipo</label>
               <select
+                id="challengemanager-tipo"
                 className="select"
                 value={custom.kind}
                 onChange={(e) => setCustom({ ...custom, kind: e.target.value as ChallengeKind })}
@@ -267,13 +285,19 @@ export default function ChallengeManager({
             </div>
             {custom.kind === "limit" && (
               <div className="field">
-                <label>Tope</label>
-                <MoneyInput value={custom.limit} onChange={(v) => setCustom({ ...custom, limit: v })} required />
+                <label htmlFor="challengemanager-tope">Tope</label>
+                <MoneyInput
+                  id="challengemanager-tope"
+                  value={custom.limit}
+                  onChange={(v) => setCustom({ ...custom, limit: v })}
+                  required
+                />
               </div>
             )}
             <div className="field">
-              <label>Categoría (opcional)</label>
+              <label htmlFor="challengemanager-categoria-opcional">Categoría (opcional)</label>
               <select
+                id="challengemanager-categoria-opcional"
                 className="select"
                 value={custom.category_id}
                 onChange={(e) => setCustom({ ...custom, category_id: e.target.value })}
@@ -287,8 +311,9 @@ export default function ChallengeManager({
               </select>
             </div>
             <div className="field">
-              <label>Palabras clave (opcional)</label>
+              <label htmlFor="challengemanager-palabras-clave-opcional">Palabras clave (opcional)</label>
               <input
+                id="challengemanager-palabras-clave-opcional"
                 className="input"
                 value={custom.keywords}
                 onChange={(e) => setCustom({ ...custom, keywords: e.target.value })}
@@ -296,8 +321,9 @@ export default function ChallengeManager({
               />
             </div>
             <div className="field">
-              <label>Desde</label>
+              <label htmlFor="challengemanager-desde">Desde</label>
               <input
+                id="challengemanager-desde"
                 className="input"
                 type="date"
                 value={custom.start_date}
@@ -306,8 +332,9 @@ export default function ChallengeManager({
               />
             </div>
             <div className="field">
-              <label>Hasta</label>
+              <label htmlFor="challengemanager-hasta">Hasta</label>
               <input
+                id="challengemanager-hasta"
                 className="input"
                 type="date"
                 value={custom.end_date}
@@ -320,7 +347,7 @@ export default function ChallengeManager({
             Cuenta un gasto si es de esa categoría o si su concepto o comercio contiene alguna palabra clave. Sin
             ninguna de las dos, cuenta cualquier gasto que no sea recurrente.
           </p>
-          <button className="btn btn-primary" style={{ marginTop: 12 }} disabled={busy === "custom"}>
+          <button type="submit" className="btn btn-primary" style={{ marginTop: 12 }} disabled={busy === "custom"}>
             {busy === "custom" && <LoaderCircle size={16} className="spin" />}
             Empezar reto
           </button>

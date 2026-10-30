@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Category, Frequency, RecurringTransaction, TransactionType } from "@/lib/types";
@@ -7,7 +7,7 @@ import { LoaderCircle, Pencil, Plus, Trash2, X } from "lucide-react";
 import Money from "@/components/Money";
 import { dateKey, monthlyEquivalent } from "@/lib/utils";
 import { daysUntil, dueLabel, frequencyLabel, parseAmount, sortRecurring } from "@/lib/recurring";
-import { useToast } from "./Toast";
+import { trapFocus, useToast } from "./Toast";
 import MoneyInput from "./MoneyInput";
 
 type F = {
@@ -45,7 +45,20 @@ export default function RecurringManager({
 }) {
   const { toast, confirm } = useToast();
   const [rows, setRows] = useState(initial);
+  const modalRef = useRef<HTMLFormElement>(null);
+  // Datos nuevos del servidor (tiempo real o tirar para recargar): sustituyen a los locales.
+  useEffect(() => setRows(initial), [initial]);
   const [form, setForm] = useState<F | null>(null);
+  const formOpen = form !== null;
+  // Cerrar el modal con Escape.
+  useEffect(() => {
+    if (!formOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setForm(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [formOpen]);
   const [saving, setSaving] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -181,7 +194,7 @@ export default function RecurringManager({
       )}
 
       <div className="toolbar desktop-only" style={{ justifyContent: "flex-end", marginBottom: 14 }}>
-        <button className="btn btn-primary" onClick={() => setForm({ ...blank })}>
+        <button type="button" className="btn btn-primary" onClick={() => setForm({ ...blank })}>
           <Plus size={16} />
           Nuevo recurrente
         </button>
@@ -223,6 +236,7 @@ export default function RecurringManager({
                 </td>
                 <td>
                   <button
+                    type="button"
                     className={`btn ${r.is_active ? "btn-soft" : "btn-ghost"}`}
                     onClick={() => toggle(r)}
                     disabled={togglingId === r.id}
@@ -238,10 +252,18 @@ export default function RecurringManager({
                 </td>
                 <td>
                   <div className="toolbar">
-                    <button className="btn btn-ghost" onClick={() => edit(r)} disabled={deletingId === r.id}>
+                    <button
+                      aria-label={`Editar ${r.concept}`}
+                      type="button"
+                      className="btn btn-ghost"
+                      onClick={() => edit(r)}
+                      disabled={deletingId === r.id}
+                    >
                       <Pencil size={16} />
                     </button>
                     <button
+                      aria-label={`Eliminar ${r.concept}`}
+                      type="button"
                       className="btn btn-ghost expense"
                       onClick={() => remove(r.id)}
                       disabled={deletingId === r.id}
@@ -331,7 +353,7 @@ export default function RecurringManager({
             </span>
             <strong>Sin movimientos recurrentes</strong>
             <p>Añade hipoteca, nómina, suscripciones… y se registrarán solos cuando llegue su fecha.</p>
-            <button className="btn btn-primary" onClick={() => setForm({ ...blank })}>
+            <button type="button" className="btn btn-primary" onClick={() => setForm({ ...blank })}>
               <Plus size={16} />
               Nuevo recurrente
             </button>
@@ -340,17 +362,26 @@ export default function RecurringManager({
       </div>
       {form && (
         <div className="modal-backdrop">
-          <form className="modal" onSubmit={save}>
+          <form
+            className="modal"
+            ref={modalRef}
+            onSubmit={save}
+            onKeyDown={(e) => trapFocus(e, modalRef.current)}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="recurring-modal-title"
+          >
             <div className="modal-head">
-              <h2>{form.id ? "Editar recurrente" : "Nuevo recurrente"}</h2>
-              <button type="button" className="btn btn-ghost" onClick={() => setForm(null)}>
+              <h2 id="recurring-modal-title">{form.id ? "Editar recurrente" : "Nuevo recurrente"}</h2>
+              <button aria-label="Cerrar" type="button" className="btn btn-ghost" onClick={() => setForm(null)}>
                 <X />
               </button>
             </div>
             <div className="form-grid">
               <div className="field">
-                <label>Concepto</label>
+                <label htmlFor="recurringmanager-concepto">Concepto</label>
                 <input
+                  id="recurringmanager-concepto"
                   className="input"
                   value={form.concept}
                   onChange={(e) => setForm({ ...form, concept: e.target.value })}
@@ -358,12 +389,18 @@ export default function RecurringManager({
                 />
               </div>
               <div className="field">
-                <label>Importe</label>
-                <MoneyInput value={form.amount} onChange={(v) => setForm({ ...form, amount: v })} required />
+                <label htmlFor="recurringmanager-importe">Importe</label>
+                <MoneyInput
+                  id="recurringmanager-importe"
+                  value={form.amount}
+                  onChange={(v) => setForm({ ...form, amount: v })}
+                  required
+                />
               </div>
               <div className="field">
-                <label>Tipo</label>
+                <label htmlFor="recurringmanager-tipo">Tipo</label>
                 <select
+                  id="recurringmanager-tipo"
                   className="select"
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value as TransactionType, category_id: "" })}
@@ -373,8 +410,9 @@ export default function RecurringManager({
                 </select>
               </div>
               <div className="field">
-                <label>Categoría</label>
+                <label htmlFor="recurringmanager-categoria">Categoría</label>
                 <select
+                  id="recurringmanager-categoria"
                   className="select"
                   value={form.category_id}
                   onChange={(e) => setForm({ ...form, category_id: e.target.value })}
@@ -390,8 +428,9 @@ export default function RecurringManager({
                 </select>
               </div>
               <div className="field">
-                <label>Frecuencia</label>
+                <label htmlFor="recurringmanager-frecuencia">Frecuencia</label>
                 <select
+                  id="recurringmanager-frecuencia"
                   className="select"
                   value={form.frequency}
                   onChange={(e) => setForm({ ...form, frequency: e.target.value as Frequency })}
@@ -402,8 +441,9 @@ export default function RecurringManager({
                 </select>
               </div>
               <div className="field">
-                <label>Próxima fecha</label>
+                <label htmlFor="recurringmanager-proxima-fecha">Próxima fecha</label>
                 <input
+                  id="recurringmanager-proxima-fecha"
                   className="input"
                   type="date"
                   value={form.next_date}
@@ -412,8 +452,9 @@ export default function RecurringManager({
               </div>
             </div>
             <div className="field" style={{ marginTop: 14 }}>
-              <label>Nota</label>
+              <label htmlFor="recurringmanager-nota">Nota</label>
               <textarea
+                id="recurringmanager-nota"
                 className="textarea"
                 value={form.note}
                 onChange={(e) => setForm({ ...form, note: e.target.value })}
@@ -423,7 +464,7 @@ export default function RecurringManager({
               <button type="button" className="btn btn-soft" onClick={() => setForm(null)}>
                 Cancelar
               </button>
-              <button className="btn btn-primary" disabled={saving}>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
                 {saving ? "Guardando…" : "Guardar"}
               </button>
             </div>

@@ -30,9 +30,9 @@ export default function WhatsNewModal() {
 
   return (
     <div className="modal-backdrop">
-      <div className="modal whatsnew-modal">
+      <div className="modal whatsnew-modal" role="dialog" aria-modal="true" aria-labelledby="whatsnew-title">
         <div className="modal-head">
-          <h2>
+          <h2 id="whatsnew-title">
             <Sparkles size={19} className="whatsnew-icon" /> Novedades
           </h2>
           <button type="button" className="btn btn-ghost" onClick={dismiss} aria-label="Cerrar">

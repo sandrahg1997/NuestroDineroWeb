@@ -31,7 +31,12 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         <p className="subtitle">
           Ha ocurrido un error inesperado. Puedes intentarlo de nuevo; si sigue pasando, vuelve más tarde.
         </p>
-        <button className="btn btn-primary" style={{ width: "100%", marginTop: 18 }} onClick={() => reset()}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          style={{ width: "100%", marginTop: 18 }}
+          onClick={() => reset()}
+        >
           Reintentar
         </button>
         <a

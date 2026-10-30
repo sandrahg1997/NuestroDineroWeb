@@ -16,7 +16,7 @@ export default async function Page() {
   return (
     <AppShell households={households} hideAmounts={hideAmounts}>
       <PageHeader title="Categorías" subtitle="Crea categorías propias para gastos e ingresos." />
-      <CategoryManager householdId={householdId} initial={(data ?? []) as any} />
+      <CategoryManager householdId={householdId} initial={data ?? []} />
     </AppShell>
   );
 }

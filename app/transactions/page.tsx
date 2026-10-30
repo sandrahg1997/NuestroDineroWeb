@@ -34,9 +34,9 @@ export default async function TransactionsPage() {
       <TransactionManager
         householdId={householdId}
         userId={user.id}
-        initial={(transactions ?? []) as any}
-        initialCategories={(categories ?? []) as any}
-        rules={(rules ?? []) as any}
+        initial={transactions ?? []}
+        initialCategories={categories ?? []}
+        rules={rules ?? []}
         periods={periods ?? []}
       />
     </AppShell>

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Budget, Category } from "@/lib/types";
 import Money from "@/components/Money";
@@ -23,6 +23,8 @@ export default function BudgetManager({
 }) {
   const { toast } = useToast();
   const [rows, setRows] = useState(initial);
+  // Datos nuevos del servidor (tiempo real o tirar para recargar): sustituyen a los locales.
+  useEffect(() => setRows(initial), [initial]);
   const [categoryId, setCategoryId] = useState("");
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
@@ -71,8 +73,13 @@ export default function BudgetManager({
         <h2>Definir presupuesto</h2>
         <p className="subtitle">Periodo: {periodLabel}</p>
         <div className="field" style={{ marginTop: 12 }}>
-          <label>Categoría</label>
-          <select className="select" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+          <label htmlFor="budgetmanager-categoria">Categoría</label>
+          <select
+            id="budgetmanager-categoria"
+            className="select"
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+          >
             <option value="">Presupuesto general</option>
             {categories
               .filter((c) => c.type === "expense")
@@ -84,10 +91,10 @@ export default function BudgetManager({
           </select>
         </div>
         <div className="field" style={{ marginTop: 12 }}>
-          <label>Límite del periodo</label>
-          <MoneyInput value={amount} onChange={setAmount} required />
+          <label htmlFor="budgetmanager-limite-del-periodo">Límite del periodo</label>
+          <MoneyInput id="budgetmanager-limite-del-periodo" value={amount} onChange={setAmount} required />
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 16 }} disabled={saving}>
+        <button type="submit" className="btn btn-primary" style={{ marginTop: 16 }} disabled={saving}>
           {saving ? "Guardando…" : "Guardar presupuesto"}
         </button>
       </form>
@@ -108,7 +115,13 @@ export default function BudgetManager({
                     <Money value={spent} /> de <Money value={b.amount} />
                   </div>
                 </div>
-                <button className="btn btn-ghost expense" onClick={() => remove(b.id)} disabled={deletingId === b.id}>
+                <button
+                  aria-label={`Eliminar presupuesto ${b.category?.name ?? "general"}`}
+                  type="button"
+                  className="btn btn-ghost expense"
+                  onClick={() => remove(b.id)}
+                  disabled={deletingId === b.id}
+                >
                   {deletingId === b.id ? <LoaderCircle size={16} className="spin" /> : <Trash2 size={16} />}
                 </button>
               </div>

@@ -42,8 +42,9 @@ export default function ForgotPasswordPage() {
         ) : (
           <>
             <div className="field" style={{ marginTop: 14 }}>
-              <label>Email</label>
+              <label htmlFor="forgot-password-email">Email</label>
               <input
+                id="forgot-password-email"
                 className="input"
                 type="email"
                 value={email}
@@ -55,7 +56,12 @@ export default function ForgotPasswordPage() {
 
             {error && <p className="expense">{error}</p>}
 
-            <button className="btn btn-primary" style={{ width: "100%", marginTop: 18 }} disabled={loading}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ width: "100%", marginTop: 18 }}
+              disabled={loading}
+            >
               {loading ? "Enviando…" : "Enviar enlace"}
             </button>
           </>
