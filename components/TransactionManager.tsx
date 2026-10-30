@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Category, Transaction, TransactionType } from "@/lib/types";
 import Money from "@/components/Money";
-import { dateKey, notifyPartnerActivity } from "@/lib/utils";
+import { dateKey, notifyPartnerActivity, TRANSACTION_LIST_FIELDS } from "@/lib/utils";
 import { merchantSuggestions } from "@/lib/receipt";
 import { Inbox, LoaderCircle, MoreVertical, Pencil, Plus, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -267,7 +267,6 @@ export default function TransactionManager({
       type: form.type,
       note: form.note.trim(),
       merchant: form.merchant.trim(),
-      receipt_text: form.receipt_text,
     };
 
     let data: Transaction | null = null;
@@ -278,10 +277,15 @@ export default function TransactionManager({
         .from("transactions")
         .update(payload)
         .eq("id", form.id)
-        .select("*,category:categories(*)")
+        // Sin receipt_text: la lista no lo carga y no debe sobrescribirse con "".
+        .select(TRANSACTION_LIST_FIELDS)
         .single());
     } else {
-      ({ data, error } = await s.from("transactions").insert(payload).select("*,category:categories(*)").single());
+      ({ data, error } = await s
+        .from("transactions")
+        .insert({ ...payload, receipt_text: form.receipt_text })
+        .select(TRANSACTION_LIST_FIELDS)
+        .single());
     }
 
     if (!error && data) {

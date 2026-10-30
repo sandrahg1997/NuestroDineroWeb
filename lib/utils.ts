@@ -21,6 +21,10 @@ export function relativeDayLabel(value: string) {
   if (value === dateKey(yesterday)) return "Ayer";
   return new Date(`${value}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
 }
+// Columnas del listado de Movimientos. Deja fuera receipt_text (el texto OCR
+// completo de cada ticket), que pesa mucho y la lista no usa.
+export const TRANSACTION_LIST_FIELDS =
+  "id,household_id,user_id,concept,amount,date,category_id,type,note,merchant,recurring_id,created_at,category:categories(*)";
 export function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }

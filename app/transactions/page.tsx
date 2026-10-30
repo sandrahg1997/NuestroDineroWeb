@@ -3,6 +3,7 @@ import PageHeader from "@/components/PageHeader";
 import TransactionManager from "@/components/TransactionManager";
 import { getSessionContext } from "@/lib/data";
 import { fetchAll } from "@/lib/fetch-all";
+import { TRANSACTION_LIST_FIELDS } from "@/lib/utils";
 import { redirect } from "next/navigation";
 export default async function TransactionsPage() {
   const { supabase, user, householdId, households, hideAmounts } = await getSessionContext();
@@ -12,7 +13,7 @@ export default async function TransactionsPage() {
     fetchAll((from, to) =>
       supabase
         .from("transactions")
-        .select("*,category:categories(*)")
+        .select(TRANSACTION_LIST_FIELDS)
         .eq("household_id", householdId)
         .order("date", { ascending: false })
         .order("created_at", { ascending: false })
