@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { HouseholdOption } from "@/lib/data";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useState, useTransition } from "react";
 import {
   LayoutDashboard,
   ReceiptText,
@@ -59,8 +59,13 @@ export default function AppShell({
   const router = useRouter();
   const { toast } = useToast();
   const [more, setMore] = useState(false);
-  const [switching, setSwitching] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // El refresh no devuelve promesa; la transición sigue pendiente hasta que
+  // llegan los datos del nuevo espacio.
+  const [refreshing, startRefresh] = useTransition();
+  const switching = saving || refreshing;
   const [hidden, setHidden] = useState(hideAmounts);
+  const [savingHidden, setSavingHidden] = useState(false);
 
   const primary = items.slice(0, 4);
   const secondary = items.slice(4);
@@ -70,27 +75,29 @@ export default function AppShell({
 
   async function handleSwitch(e: React.ChangeEvent<HTMLSelectElement>) {
     const householdId = e.target.value;
-    setSwitching(true);
+    setSaving(true);
     const s = createClient();
     const { error } = await s.rpc("set_active_household", { p_household_id: householdId });
+    setSaving(false);
     if (error) {
       toast(error.message, "error");
-      setSwitching(false);
       return;
     }
-    router.refresh();
-    setSwitching(false);
+    startRefresh(() => router.refresh());
   }
 
   async function toggleHideAmounts() {
+    if (savingHidden) return;
     const next = !hidden;
     setHidden(next);
+    setSavingHidden(true);
     const s = createClient();
     const { error } = await s.rpc("set_hide_amounts", { p_hidden: next });
     if (error) {
       setHidden(!next);
       toast(error.message, "error");
     }
+    setSavingHidden(false);
   }
 
   const privacyLabel = hidden ? "Mostrar importes" : "Ocultar importes";
@@ -99,7 +106,9 @@ export default function AppShell({
       type="button"
       className={`privacy-toggle ${hidden ? "active" : ""}`}
       onClick={toggleHideAmounts}
+      disabled={savingHidden}
       aria-pressed={hidden}
+      aria-busy={savingHidden}
     >
       {hidden ? <EyeOff size={19} /> : <Eye size={19} />}
       {privacyLabel}

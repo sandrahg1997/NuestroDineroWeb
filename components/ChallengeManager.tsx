@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -57,7 +57,11 @@ export default function ChallengeManager({
 }) {
   const router = useRouter();
   const { toast, confirm, askText } = useToast();
-  const [busy, setBusy] = useState<string | null>(null);
+  const [saving, setBusy] = useState<string | null>(null);
+  // El spinner del botón pulsado sigue hasta que el refresh trae los datos.
+  const [refreshing, startRefresh] = useTransition();
+  const [refreshKey, setRefreshKey] = useState<string | null>(null);
+  const busy = saving ?? (refreshing ? refreshKey : null);
   const [custom, setCustom] = useState<ReturnType<typeof blankCustom> | null>(null);
 
   const live = items.filter((i) => ["active", "broken", "upcoming"].includes(i.progress.status));
@@ -71,7 +75,12 @@ export default function ChallengeManager({
   // Una plantilla de categoría solo tiene sentido si esa categoría existe en el espacio.
   const templates = CHALLENGE_TEMPLATES.filter((t) => !t.categoryName || categoryByName(t.categoryName));
 
-  async function insert(row: Omit<Challenge, "id" | "household_id" | "created_at">) {
+  function refresh(key: string) {
+    setRefreshKey(key);
+    startRefresh(() => router.refresh());
+  }
+
+  async function insert(key: string, row: Omit<Challenge, "id" | "household_id" | "created_at">) {
     const s = createClient();
     const { error } = await s.from("challenges").insert({ ...row, household_id: householdId, created_by: userId });
     if (error) {
@@ -79,7 +88,7 @@ export default function ChallengeManager({
       return false;
     }
     toast("¡Reto en marcha! 💪", "success");
-    router.refresh();
+    refresh(key);
     return true;
   }
 
@@ -95,7 +104,7 @@ export default function ChallengeManager({
       if (!Number.isFinite(limit) || limit <= 0) return toast("Introduce un importe válido mayor que cero.", "error");
     }
     setBusy(t.key);
-    await insert({
+    await insert(t.key, {
       title: t.title,
       icon: t.icon,
       kind: t.kind,
@@ -119,7 +128,7 @@ export default function ChallengeManager({
       return toast("Introduce un tope válido mayor que cero.", "error");
     if (custom.end_date < custom.start_date) return toast("La fecha de fin no puede ser anterior al inicio.", "error");
     setBusy("custom");
-    const ok = await insert({
+    const ok = await insert("custom", {
       title: custom.title.trim(),
       icon: custom.icon.trim() || "🎯",
       kind: custom.kind,
@@ -149,7 +158,7 @@ export default function ChallengeManager({
     const s = createClient();
     const { error } = await s.from("challenges").delete().eq("id", item.challenge.id);
     if (error) toast(error.message, "error");
-    else router.refresh();
+    else refresh(item.challenge.id);
     setBusy(null);
   }
 

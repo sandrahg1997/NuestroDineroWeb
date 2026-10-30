@@ -2,6 +2,7 @@ import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
 import PeriodManager from "@/components/PeriodManager";
 import { getSessionContext } from "@/lib/data";
+import { fetchAll } from "@/lib/fetch-all";
 import { redirect } from "next/navigation";
 
 export default async function Page() {
@@ -11,7 +12,14 @@ export default async function Page() {
 
   const [{ data: periods }, { data: tx }] = await Promise.all([
     supabase.from("periods").select("*").eq("household_id", householdId).order("start_date", { ascending: false }),
-    supabase.from("transactions").select("type,amount,date").eq("household_id", householdId),
+    fetchAll((from, to) =>
+      supabase
+        .from("transactions")
+        .select("type,amount,date")
+        .eq("household_id", householdId)
+        .order("id")
+        .range(from, to)
+    ),
   ]);
 
   const rows = periods ?? [];

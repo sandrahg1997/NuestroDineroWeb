@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchAll } from "./fetch-all";
 
 type PeriodTransaction = {
   id: string;
@@ -50,14 +51,18 @@ export async function computePeriodSummary(
   periodId?: string | null
 ): Promise<PeriodSummary> {
   const [{ data: tx }, { data: budgetData }] = await Promise.all([
-    supabase
-      .from("transactions")
-      .select("id,type,amount,date,concept,merchant,category_id,recurring_id,category:categories(name)")
-      .eq("household_id", householdId)
-      .gte("date", start)
-      .lte("date", end)
-      .order("date", { ascending: false })
-      .order("created_at", { ascending: false }),
+    fetchAll((from, to) =>
+      supabase
+        .from("transactions")
+        .select("id,type,amount,date,concept,merchant,category_id,recurring_id,category:categories(name)")
+        .eq("household_id", householdId)
+        .gte("date", start)
+        .lte("date", end)
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .order("id")
+        .range(from, to)
+    ),
     periodId
       ? supabase
           .from("budgets")

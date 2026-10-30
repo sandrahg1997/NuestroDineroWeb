@@ -5,6 +5,7 @@ import Money from "@/components/Money";
 import type { Period } from "@/lib/types";
 import { defaultPeriodName, formatDateEs } from "@/lib/utils";
 import { overlappingPeriods, overlapWarning } from "@/lib/periods";
+import { fetchAll } from "@/lib/fetch-all";
 import { CalendarRange, LoaderCircle, Pencil, Plus, Star, Trash2, TriangleAlert, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -15,12 +16,16 @@ type EditDraft = { name: string; start: string; end: string };
 
 async function fetchSummary(householdId: string, start: string, end: string) {
   const s = createClient();
-  const { data } = await s
-    .from("transactions")
-    .select("type,amount")
-    .eq("household_id", householdId)
-    .gte("date", start)
-    .lte("date", end);
+  const { data } = await fetchAll((from, to) =>
+    s
+      .from("transactions")
+      .select("type,amount")
+      .eq("household_id", householdId)
+      .gte("date", start)
+      .lte("date", end)
+      .order("id")
+      .range(from, to)
+  );
   const rows = data ?? [];
   const expense = rows.filter((r) => r.type === "expense").reduce((t, r) => t + Number(r.amount), 0);
   const income = rows.filter((r) => r.type === "income").reduce((t, r) => t + Number(r.amount), 0);

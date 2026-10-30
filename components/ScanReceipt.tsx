@@ -22,6 +22,7 @@ export default function ScanReceipt({
   const { toast } = useToast();
   const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState("");
   const [text, setText] = useState("");
   const [merchant, setMerchant] = useState("");
   const [amount, setAmount] = useState("");
@@ -31,15 +32,19 @@ export default function ScanReceipt({
   async function scan(file: File) {
     setBusy(true);
     setProgress(0);
+    setStage("Preparando el lector…");
     const url = URL.createObjectURL(file);
+    let worker: Awaited<ReturnType<typeof createWorker>> | null = null;
     try {
-      const worker = await createWorker("spa+eng", 1, {
+      worker = await createWorker("spa+eng", 1, {
         logger: (m) => {
-          if (m.status === "recognizing text") setProgress(Math.round((m.progress ?? 0) * 100));
+          if (m.status === "recognizing text") {
+            setStage("Leyendo ticket…");
+            setProgress(Math.round((m.progress ?? 0) * 100));
+          } else if (m.status?.startsWith("loading")) setStage("Descargando idioma (solo la primera vez)…");
         },
       });
       const result = await worker.recognize(url);
-      await worker.terminate();
       setText(result.data.text);
       const parsed = parseReceipt(result.data.text);
       setMerchant(parsed.merchant);
@@ -55,7 +60,10 @@ export default function ScanReceipt({
         );
         if (match) setCategoryId(match.id);
       }
+    } catch {
+      toast("No se pudo leer el ticket. Prueba con otra foto o revisa la conexión.", "error");
     } finally {
+      await worker?.terminate().catch(() => {});
       URL.revokeObjectURL(url);
       setBusy(false);
     }
@@ -98,7 +106,11 @@ export default function ScanReceipt({
   return (
     <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))" }}>
       <div className="card">
-        <label className="scan-drop" style={{ display: "block", cursor: "pointer" }}>
+        <label
+          className="scan-drop"
+          style={{ display: "block", cursor: busy ? "progress" : "pointer" }}
+          aria-busy={busy}
+        >
           <Camera size={42} />
           <h2>{busy ? "Leyendo el ticket…" : "Haz una foto o elige una imagen"}</h2>
           <p className="subtitle">
@@ -107,6 +119,7 @@ export default function ScanReceipt({
           {busy && (
             <>
               <LoaderCircle className="spin" />
+              {stage && <p className="subtitle">{stage}</p>}
               <div className="progress">
                 <span style={{ width: `${progress}%` }} />
               </div>
@@ -117,7 +130,13 @@ export default function ScanReceipt({
             type="file"
             accept="image/*"
             capture="environment"
-            onChange={(e) => e.target.files?.[0] && scan(e.target.files[0])}
+            disabled={busy}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              // Vaciar el input permite volver a elegir la misma foto tras un fallo.
+              e.target.value = "";
+              if (file) scan(file);
+            }}
           />
         </label>
         {text && (

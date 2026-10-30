@@ -2,6 +2,7 @@ import AppShell from "@/components/AppShell";
 import HistoricoChartsLoader from "@/components/HistoricoChartsLoader";
 import PageHeader from "@/components/PageHeader";
 import { getSessionContext } from "@/lib/data";
+import { fetchAll } from "@/lib/fetch-all";
 import { redirect } from "next/navigation";
 
 export default async function HistoricoPage() {
@@ -18,7 +19,14 @@ export default async function HistoricoPage() {
       .select("id,name,start_date,end_date")
       .eq("household_id", householdId)
       .order("start_date", { ascending: true }),
-    supabase.from("transactions").select("date,amount,type,category_id").eq("household_id", householdId),
+    fetchAll((from, to) =>
+      supabase
+        .from("transactions")
+        .select("date,amount,type,category_id")
+        .eq("household_id", householdId)
+        .order("id")
+        .range(from, to)
+    ),
     supabase.from("categories").select("*").eq("household_id", householdId).order("name"),
   ]);
 

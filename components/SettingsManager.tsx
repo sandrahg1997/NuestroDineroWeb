@@ -1,6 +1,7 @@
 "use client";
-import { useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { fetchAll } from "@/lib/fetch-all";
 import { Copy, Download, LoaderCircle, Plus, TriangleAlert, Upload, User, Users } from "lucide-react";
 import { useToast } from "./Toast";
 import { useRouter } from "next/navigation";
@@ -27,11 +28,11 @@ export default function SettingsManager({
   notifyRecurringReminder?: boolean;
 }) {
   const [joinCode, setJoinCode] = useState("");
-  const [creating, setCreating] = useState(false);
+  const [savingCreate, setSavingCreate] = useState(false);
   const [spaceName, setSpaceName] = useState(householdName);
   const [savingSpaceName, setSavingSpaceName] = useState(false);
   const [spaceNameSaved, setSpaceNameSaved] = useState(false);
-  const [joining, setJoining] = useState(false);
+  const [savingJoin, setSavingJoin] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -42,6 +43,12 @@ export default function SettingsManager({
   const [deletingSpace, setDeletingSpace] = useState(false);
   const { toast, confirm, askText } = useToast();
   const router = useRouter();
+  // Tras unirse o crear un espacio, el botón sigue en "cargando" hasta que el
+  // refresh trae los datos nuevos (antes se quedaba así para siempre).
+  const [refreshing, startRefresh] = useTransition();
+  const [refreshFor, setRefreshFor] = useState<"join" | "create" | null>(null);
+  const joining = savingJoin || (refreshing && refreshFor === "join");
+  const creating = savingCreate || (refreshing && refreshFor === "create");
   async function deleteSpace() {
     if (
       (await askText(
@@ -69,7 +76,14 @@ export default function SettingsManager({
     )
       return;
     setDeletingAccount(true);
-    const res = await fetch("/api/account/delete", { method: "POST" });
+    let res: Response;
+    try {
+      res = await fetch("/api/account/delete", { method: "POST" });
+    } catch {
+      toast("Sin conexión. Inténtalo de nuevo.", "error");
+      setDeletingAccount(false);
+      return;
+    }
     if (!res.ok) {
       const { error } = await res.json().catch(() => ({ error: "No se pudo eliminar la cuenta." }));
       toast(error, "error");
@@ -92,13 +106,17 @@ export default function SettingsManager({
   }
   async function join(e: React.FormEvent) {
     e.preventDefault();
-    setJoining(true);
+    setSavingJoin(true);
     const s = createClient();
     const { error } = await s.rpc("join_household", { p_invite_code: joinCode.trim().toUpperCase() });
+    setSavingJoin(false);
     if (error) {
       toast(error.message, "error");
-      setJoining(false);
-    } else router.refresh();
+      return;
+    }
+    setJoinCode("");
+    setRefreshFor("join");
+    startRefresh(() => router.refresh());
   }
   async function saveSpaceName(e: React.FormEvent) {
     e.preventDefault();
@@ -123,22 +141,29 @@ export default function SettingsManager({
       confirmLabel: "Crear",
     });
     if (!p_name || !p_name.trim()) return;
-    setCreating(true);
+    setSavingCreate(true);
     const s = createClient();
     const { error } = await s.rpc("create_personal_household", { p_name: p_name.trim() });
+    setSavingCreate(false);
     if (error) {
       toast(error.message, "error");
-      setCreating(false);
-    } else router.refresh();
+      return;
+    }
+    setRefreshFor("create");
+    startRefresh(() => router.refresh());
   }
   async function exportXlsx() {
     setExporting(true);
     const s = createClient();
-    const { data, error } = await s
-      .from("transactions")
-      .select("date,type,concept,merchant,amount,note,category:categories(name)")
-      .eq("household_id", householdId)
-      .order("date");
+    const { data, error } = await fetchAll((from, to) =>
+      s
+        .from("transactions")
+        .select("date,type,concept,merchant,amount,note,category:categories(name)")
+        .eq("household_id", householdId)
+        .order("date")
+        .order("id")
+        .range(from, to)
+    );
     if (error) {
       setExporting(false);
       return toast(error.message, "error");
@@ -402,6 +427,7 @@ export default function SettingsManager({
           />
         </div>
         <button className="btn btn-primary" style={{ marginTop: 14 }} disabled={joining}>
+          {joining && <LoaderCircle size={16} className="spin" />}
           {joining ? "Uniendo…" : "Unirme"}
         </button>
       </form>
@@ -411,7 +437,7 @@ export default function SettingsManager({
           Crea un espacio solo para ti, separado del compartido, para tus gastos e ingresos personales.
         </p>
         <button className="btn btn-soft" onClick={createPersonal} disabled={creating}>
-          <Plus size={16} />
+          {creating ? <LoaderCircle size={16} className="spin" /> : <Plus size={16} />}
           {creating ? "Creando…" : "Crear espacio personal"}
         </button>
       </div>

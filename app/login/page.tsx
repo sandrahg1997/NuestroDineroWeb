@@ -23,9 +23,13 @@ export default function LoginPage() {
       mode === "login"
         ? await s.auth.signInWithPassword({ email, password })
         : await s.auth.signUp({ email, password, options: { data: { display_name: name } } });
-    if (result.error) setError(result.error.message);
-    else location.href = "/dashboard";
-    setLoading(false);
+    if (result.error) {
+      setError(result.error.message);
+      setLoading(false);
+      return;
+    }
+    // Sin volver a poner loading a false: el botón sigue desactivado mientras redirige.
+    location.href = "/dashboard";
   }
 
   return (

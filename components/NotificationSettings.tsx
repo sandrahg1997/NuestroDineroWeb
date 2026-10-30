@@ -34,6 +34,7 @@ export default function NotificationSettings({
   const [subscribed, setSubscribed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
   const [prefs, setPrefs] = useState({
     partnerActivity: initialPartnerActivity,
     weeklyReport: initialWeeklyReport,
@@ -106,15 +107,19 @@ export default function NotificationSettings({
         await sub.unsubscribe();
       }
       setSubscribed(false);
+    } catch {
+      toast("No se pudieron desactivar las notificaciones. Inténtalo de nuevo.", "error");
     } finally {
       setBusy(false);
     }
   }
 
   async function savePrefs(change: Partial<typeof prefs>) {
+    if (savingPrefs) return;
     const prev = prefs;
     const next = { ...prefs, ...change };
     setPrefs(next);
+    setSavingPrefs(true);
     const s = createClient();
     const { error } = await s.rpc("set_notification_prefs", {
       p_partner_activity: next.partnerActivity,
@@ -125,15 +130,21 @@ export default function NotificationSettings({
       setPrefs(prev);
       toast(error.message, "error");
     }
+    setSavingPrefs(false);
   }
 
   async function sendTest() {
     setTesting(true);
-    const res = await fetch("/api/push/test", { method: "POST" });
-    const body = await res.json().catch(() => null);
-    if (!res.ok) toast(body?.error ?? "No se pudo enviar la prueba.", "error");
-    else if (!body?.sent) toast("No hay ningún dispositivo con avisos activados.", "error");
-    setTesting(false);
+    try {
+      const res = await fetch("/api/push/test", { method: "POST" });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) toast(body?.error ?? "No se pudo enviar la prueba.", "error");
+      else if (!body?.sent) toast("No hay ningún dispositivo con avisos activados.", "error");
+    } catch {
+      toast("Sin conexión. Inténtalo de nuevo.", "error");
+    } finally {
+      setTesting(false);
+    }
   }
 
   return (
@@ -182,6 +193,7 @@ export default function NotificationSettings({
               <input
                 type="checkbox"
                 checked={prefs.partnerActivity}
+                disabled={savingPrefs}
                 onChange={(e) => savePrefs({ partnerActivity: e.target.checked })}
               />
               <span>
@@ -193,6 +205,7 @@ export default function NotificationSettings({
               <input
                 type="checkbox"
                 checked={prefs.weeklyReport}
+                disabled={savingPrefs}
                 onChange={(e) => savePrefs({ weeklyReport: e.target.checked })}
               />
               <span>
@@ -204,6 +217,7 @@ export default function NotificationSettings({
               <input
                 type="checkbox"
                 checked={prefs.recurringReminder}
+                disabled={savingPrefs}
                 onChange={(e) => savePrefs({ recurringReminder: e.target.checked })}
               />
               <span>

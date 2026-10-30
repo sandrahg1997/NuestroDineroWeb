@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LoaderCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
-  const [ready, setReady] = useState(false);
+  // null mientras se comprueba la sesión del enlace, para no enseñar "enlace
+  // caducado" un instante cuando sí es válido.
+  const [ready, setReady] = useState<boolean | null>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -42,7 +45,14 @@ export default function ResetPasswordPage() {
         </div>
         <h1>Nueva contraseña</h1>
 
-        {!ready && !done && (
+        {ready === null && (
+          <div className="page-loading">
+            <LoaderCircle className="spin" />
+            <span>Comprobando enlace…</span>
+          </div>
+        )}
+
+        {ready === false && !done && (
           <p className="subtitle" style={{ marginTop: 18 }}>
             Este enlace ya no es válido o ha caducado. <a href="/forgot-password">Solicita uno nuevo</a>.
           </p>

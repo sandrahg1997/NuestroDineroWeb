@@ -7,7 +7,7 @@ import { computePeriodSummary } from "@/lib/period-summary";
 function fakeSupabase(data: { transactions?: any[]; budgets?: any[] }) {
   const builder = (rows: any[]) => {
     const p: any = {};
-    for (const m of ["select", "eq", "gte", "lte", "order", "in", "not", "maybeSingle"]) {
+    for (const m of ["select", "eq", "gte", "lte", "order", "in", "not", "range", "maybeSingle"]) {
       p[m] = () => p;
     }
     p.then = (resolve: (v: { data: any[]; error: null }) => unknown) => resolve({ data: rows, error: null });
