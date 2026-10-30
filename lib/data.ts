@@ -18,17 +18,19 @@ const EMPTY = {
 
 export async function getSessionContext() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Usuario y bootstrap (hogares + preferencias + periodo activo) en paralelo:
+  // el RPC ya se autentica con el JWT y sin sesión devuelve vacío.
+  const [
+    {
+      data: { user },
+    },
+    { data: boot, error },
+  ] = await Promise.all([supabase.auth.getUser(), supabase.rpc("get_session_bootstrap")]);
   if (!user) return { supabase, user: null, ...EMPTY };
 
   let households: HouseholdOption[] = [];
   let hideAmounts = false;
   let activePeriod: Period | null = null;
-
-  // Una sola llamada: hogares + preferencias + periodo activo.
-  const { data: boot, error } = await supabase.rpc("get_session_bootstrap");
 
   if (!error && boot) {
     households = (boot.households ?? []) as HouseholdOption[];

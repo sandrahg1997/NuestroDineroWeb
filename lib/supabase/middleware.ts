@@ -38,7 +38,10 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
+  // Refresca la sesión si hace falta. getClaims() verifica el JWT en local (con
+  // claves asimétricas) en vez de llamar al servidor de Auth en cada petición,
+  // incluidos los prefetch de los enlaces del menú.
+  await supabase.auth.getClaims();
 
   return response;
 }

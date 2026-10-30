@@ -65,7 +65,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const previousEnd = previousPeriod?.end_date ?? new Date(rangeStart.getTime() - 86400000).toISOString().slice(0, 10);
 
   const todayKey = dateKey();
-  const [summary, { data: previousTx }, { data: activeRecurring }, { data: activeChallenges }] = await Promise.all([
+  const [summary, { data: previousTx }, { data: activeRecurring }, { challenge, challengeTx }] = await Promise.all([
     computePeriodSummary(supabase, householdId, selectedStart, selectedEnd, periodId),
     supabase
       .from("transactions")
@@ -79,6 +79,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       .eq("household_id", householdId)
       .eq("is_active", true),
     // Si la tabla de retos aún no existe (migración sin aplicar) viene vacío.
+    // Sus gastos se piden encadenados aquí para no esperar a las demás consultas.
     supabase
       .from("challenges")
       .select("*")
@@ -86,7 +87,19 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       .lte("start_date", todayKey)
       .gte("end_date", todayKey)
       .order("end_date")
-      .limit(1),
+      .limit(1)
+      .then(async ({ data }) => {
+        const challenge = ((data ?? []) as Challenge[])[0];
+        if (!challenge) return { challenge: undefined, challengeTx: [] };
+        const { data: challengeTx } = await supabase
+          .from("transactions")
+          .select("type,amount,date,concept,merchant,category_id,recurring_id")
+          .eq("household_id", householdId)
+          .eq("type", "expense")
+          .gte("date", challenge.start_date)
+          .lte("date", todayKey);
+        return { challenge, challengeTx: challengeTx ?? [] };
+      }),
   ]);
 
   const recurringRows = (activeRecurring ?? []) as {
@@ -145,17 +158,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       })
     : null;
 
-  const challenge = ((activeChallenges ?? []) as Challenge[])[0];
   let challengeInsight: Insight | null = null;
   if (challenge) {
-    const { data: challengeTx } = await supabase
-      .from("transactions")
-      .select("type,amount,date,concept,merchant,category_id,recurring_id")
-      .eq("household_id", householdId)
-      .eq("type", "expense")
-      .gte("date", challenge.start_date)
-      .lte("date", todayKey);
-    const progress = challengeProgress(challenge, (challengeTx ?? []) as any, todayKey);
+    const progress = challengeProgress(challenge, challengeTx as any, todayKey);
     challengeInsight = {
       icon: challenge.icon,
       title: challenge.title,
