@@ -207,8 +207,8 @@ export default function CategoryComparison({
 
           <div className="chart-caption" style={{ marginTop: 12 }}>
             <span>
-              Ordenado por mayor recorte · barra clara = tendencia últimos {comparison.trendCount} periodos · pulsa una
-              fila para ver sus movimientos.
+              De mayor a menor gasto · barra clara = tendencia últimos {comparison.trendCount} periodos · pulsa una fila
+              para ver sus movimientos.
             </span>
           </div>
         </>

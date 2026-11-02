@@ -12,7 +12,7 @@ export type Filters = {
 
 export type PeriodOption = { id: string; name: string; start_date: string; end_date: string };
 
-export const NO_FILTERS: Filters = { type: "all", category: "", dateFrom: "", dateTo: "", sort: "date_desc" };
+export const NO_FILTERS: Filters = { type: "all", category: "", dateFrom: "", dateTo: "", sort: "amount_desc" };
 
 export function activeFilterCount(f: Filters) {
   return [f.type !== "all", !!f.category, !!(f.dateFrom || f.dateTo)].filter(Boolean).length;
@@ -113,10 +113,10 @@ export default function TransactionFilters({
         value={filters.sort}
         onChange={(e) => onChange({ sort: e.target.value as Filters["sort"] })}
       >
-        <option value="date_desc">Más recientes</option>
-        <option value="date_asc">Más antiguos</option>
         <option value="amount_desc">Mayor importe</option>
         <option value="amount_asc">Menor importe</option>
+        <option value="date_desc">Más recientes</option>
+        <option value="date_asc">Más antiguos</option>
       </select>
       {activeFilterCount(filters) > 0 && (
         <button

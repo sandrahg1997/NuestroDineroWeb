@@ -70,6 +70,25 @@ export function periodEvolution(orderedPeriods: PeriodRow[], rows: HistoricoRow[
   return { evolution, totalExpense, totalIncome, avgExpense, forecastExpense };
 }
 
+// Suma de ingresos, gastos y diferencia de los periodos elegidos, con la media
+// por periodo y el % de lo ingresado que se ha ahorrado (null si no hubo ingresos).
+export function sumPeriods(evolution: PeriodPoint[], ids: ReadonlySet<string>) {
+  const picked = evolution.filter((p) => ids.has(p.id));
+  const count = picked.length;
+  const income = picked.reduce((s, p) => s + p.income, 0);
+  const expense = picked.reduce((s, p) => s + p.expense, 0);
+  const balance = income - expense;
+  return {
+    count,
+    income,
+    expense,
+    balance,
+    avgExpense: count ? expense / count : 0,
+    avgBalance: count ? balance / count : 0,
+    savingsRate: income > 0 ? Math.round((balance / income) * 100) : null,
+  };
+}
+
 // periodId -> (categoryId -> total gastado)
 export function expenseByPeriod(orderedPeriods: PeriodRow[], rows: HistoricoRow[]) {
   const map = new Map<string, Map<string, number>>();
@@ -167,7 +186,7 @@ export function compareCategories(
     })
     .filter((r) => r.now > 0 || r.before > 0);
 
-  rows.sort((a, b) => a.delta - b.delta); // recortes primero (delta más negativo arriba)
+  rows.sort((a, b) => b.now - a.now || a.delta - b.delta); // de mayor a menor gasto del periodo
 
   return {
     rows,

@@ -8,6 +8,15 @@ export type ChangelogEntry = {
 // `version` debe ser único y ordenable (usamos fecha YYYY-MM-DD); `date` es el texto que se muestra.
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-11-02",
+    date: "2 de noviembre de 2026",
+    items: [
+      "Nuevo: en Histórico › Periodo a periodo, marca los periodos que quieras y verás la suma de sus ingresos, gastos y la diferencia, la media por periodo y qué parte de lo ingresado habéis ahorrado. La selección se recuerda en cada dispositivo.",
+      "Cambiado: el informe semanal llega ahora los lunes a las 20:00 en lugar del domingo, y resume la semana completa que acaba de terminar (de lunes a domingo). Puedes desactivarlo en Ajustes › Notificaciones.",
+      "Cambiado: los listados se ordenan de mayor a menor importe: movimientos (puedes volver a ordenarlos por fecha en los filtros), recurrentes, presupuestos y la comparativa por categoría del Histórico.",
+    ],
+  },
+  {
     version: "2026-10-28",
     date: "28 de octubre de 2026",
     items: [

@@ -128,9 +128,9 @@ export default function TransactionManager({
         const aDate = typeof a.date === "string" ? a.date : "";
         const bDate = typeof b.date === "string" ? b.date : "";
         if (sort === "date_asc") return aDate.localeCompare(bDate);
-        if (sort === "amount_desc") return b.amount - a.amount;
-        if (sort === "amount_asc") return a.amount - b.amount;
-        return bDate.localeCompare(aDate);
+        if (sort === "date_desc") return bDate.localeCompare(aDate);
+        if (sort === "amount_asc") return a.amount - b.amount || bDate.localeCompare(aDate);
+        return b.amount - a.amount || bDate.localeCompare(aDate);
       });
   }, [rows, debouncedQuery, filters]);
 

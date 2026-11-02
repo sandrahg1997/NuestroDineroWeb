@@ -24,10 +24,14 @@ export function buildWeeklyReport(input: WeeklyReportInput): { title: string; bo
   if (previousWeekExpense > 0) {
     const pct = Math.round(((weekExpense - previousWeekExpense) / previousWeekExpense) * 100);
     const trend = pct === 0 ? "igual que la anterior" : `${pct > 0 ? "+" : "−"}${Math.abs(pct)} % que la anterior`;
-    parts.push(hideAmounts ? `Esta semana habéis gastado ${trend}.` : `Habéis gastado ${fmt(weekExpense)} (${trend}).`);
+    parts.push(
+      hideAmounts
+        ? `La semana pasada gastasteis ${trend}.`
+        : `La semana pasada gastasteis ${fmt(weekExpense)} (${trend}).`
+    );
   } else {
     parts.push(
-      hideAmounts ? "Este es vuestro resumen de la semana." : `Habéis gastado ${fmt(weekExpense)} esta semana.`
+      hideAmounts ? "Este es vuestro resumen de la semana pasada." : `La semana pasada gastasteis ${fmt(weekExpense)}.`
     );
   }
 

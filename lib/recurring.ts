@@ -1,12 +1,13 @@
 import type { Frequency, TransactionType } from "./types";
 
-type Sortable = { is_active: boolean; next_date: string; concept: string };
+type Sortable = { is_active: boolean; next_date: string; concept: string; amount: number | string };
 
-// Activos primero; dentro de cada grupo, el próximo cobro antes.
+// Activos primero; dentro de cada grupo, de mayor a menor importe.
 export function sortRecurring<T extends Sortable>(rows: T[]): T[] {
   return [...rows].sort(
     (a, b) =>
       Number(b.is_active) - Number(a.is_active) ||
+      Number(b.amount) - Number(a.amount) ||
       a.next_date.localeCompare(b.next_date) ||
       a.concept.localeCompare(b.concept, "es")
   );

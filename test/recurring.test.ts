@@ -2,11 +2,11 @@ import { describe, it, expect } from "vitest";
 import { buildRecurringReminder, daysUntil, dueLabel, parseAmount, sortRecurring } from "@/lib/recurring";
 
 describe("sortRecurring", () => {
-  it("activos primero y por próxima fecha", () => {
+  it("activos primero y de mayor a menor importe", () => {
     const rows = [
-      { concept: "Gimnasio", is_active: false, next_date: "2026-11-01" },
-      { concept: "Netflix", is_active: true, next_date: "2026-11-15" },
-      { concept: "Hipoteca", is_active: true, next_date: "2026-11-01" },
+      { concept: "Gimnasio", is_active: false, next_date: "2026-11-01", amount: 900 },
+      { concept: "Netflix", is_active: true, next_date: "2026-11-01", amount: 13 },
+      { concept: "Hipoteca", is_active: true, next_date: "2026-11-15", amount: "850" },
     ];
     expect(sortRecurring(rows).map((r) => r.concept)).toEqual(["Hipoteca", "Netflix", "Gimnasio"]);
   });

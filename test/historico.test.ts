@@ -5,6 +5,7 @@ import {
   expenseByPeriod,
   NO_CATEGORY,
   periodEvolution,
+  sumPeriods,
   type HistoricoRow,
   type PeriodRow,
 } from "@/lib/historico";
@@ -58,7 +59,7 @@ describe("compareCategories", () => {
     expect(byCat.super).toMatchObject({ now: 120, before: 200, delta: -80, tag: null });
     expect(byCat.ocio).toMatchObject({ now: 0, before: 50, tag: "gone" });
     expect(byCat[NO_CATEGORY]).toMatchObject({ name: "Sin categoría", now: 30, before: 0, tag: "new" });
-    // Recortes primero.
+    // De mayor a menor gasto.
     expect(c.rows[0].cat).toBe("super");
     expect(c.cut).toBe(130);
     expect(c.up).toBe(30);
@@ -74,5 +75,22 @@ describe("compareCategories", () => {
   it("sin periodo base no hay datos que comparar", () => {
     const c = compareCategories(periods, byPeriod, 0, "prev", (id) => names[id]);
     expect(c.hasBaseData).toBe(false);
+  });
+});
+
+describe("sumPeriods", () => {
+  it("suma solo los periodos elegidos e ignora ids que ya no existen", () => {
+    const { evolution } = periodEvolution(periods, rows);
+    expect(sumPeriods(evolution, new Set(["p1", "p2", "borrado"]))).toEqual({
+      count: 2,
+      income: 1000,
+      expense: 350,
+      balance: 650,
+      avgExpense: 175,
+      avgBalance: 325,
+      savingsRate: 65,
+    });
+    expect(sumPeriods(evolution, new Set(["p3"])).savingsRate).toBeNull();
+    expect(sumPeriods(evolution, new Set())).toMatchObject({ count: 0, avgExpense: 0, savingsRate: null });
   });
 });

@@ -210,7 +210,7 @@ export default function NotificationSettings({
               />
               <span>
                 <strong>Informe semanal</strong>
-                <small>Los domingos por la tarde: gasto de la semana, presupuesto y retos.</small>
+                <small>Los lunes a las 20:00: gasto de la semana pasada, presupuesto y retos.</small>
               </span>
             </label>
             <label className="notify-option">

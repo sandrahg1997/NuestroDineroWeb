@@ -111,19 +111,21 @@ export async function computePeriodSummary(
   const balance = income - expense;
   const savingsRate = income > 0 ? Math.round((balance / income) * 100) : 0;
 
-  const budgets = budgetRows.map((b) => {
-    const amount = Number(b.amount);
-    const spent = b.category_id ? (categorySpendById.get(b.category_id) ?? 0) : expense;
-    return {
-      id: b.id,
-      name: b.category?.name ?? "Presupuesto general",
-      icon: b.category?.icon,
-      amount,
-      spent,
-      percentage: amount > 0 ? Math.round((spent / amount) * 100) : 0,
-      categoryId: b.category_id,
-    };
-  });
+  const budgets = budgetRows
+    .map((b) => {
+      const amount = Number(b.amount);
+      const spent = b.category_id ? (categorySpendById.get(b.category_id) ?? 0) : expense;
+      return {
+        id: b.id,
+        name: b.category?.name ?? "Presupuesto general",
+        icon: b.category?.icon,
+        amount,
+        spent,
+        percentage: amount > 0 ? Math.round((spent / amount) * 100) : 0,
+        categoryId: b.category_id,
+      };
+    })
+    .sort((a, b) => b.amount - a.amount);
 
   return {
     rows,

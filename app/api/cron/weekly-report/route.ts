@@ -4,7 +4,7 @@ import { getNotificationPrefs, pushConfigured, sendPushToUsers, todayInSpain } f
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dateKey } from "@/lib/utils";
 import { buildWeeklyReport } from "@/lib/weekly-report";
-import { addDays, parseISO } from "date-fns";
+import { addDays, parseISO, startOfWeek } from "date-fns";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -20,8 +20,9 @@ type WeekTx = {
   category: { name?: string } | null;
 };
 
-// Cron semanal de Vercel (domingo por la tarde, ver vercel.json). Manda a cada
-// persona con avisos activados un resumen de la semana de su espacio activo.
+// Cron semanal de Vercel (lunes a las 20:00 en España, ver vercel.json). Manda a
+// cada persona con avisos activados un resumen de la semana pasada (de lunes a
+// domingo) de su espacio activo.
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
@@ -31,8 +32,10 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient();
   const today = todayInSpain();
-  const weekStart = dateKey(addDays(parseISO(today), -6));
-  const prevStart = dateKey(addDays(parseISO(today), -13));
+  const thisMonday = startOfWeek(parseISO(today), { weekStartsOn: 1 });
+  const weekStart = dateKey(addDays(thisMonday, -7));
+  const weekEnd = dateKey(addDays(thisMonday, -1));
+  const prevStart = dateKey(addDays(thisMonday, -14));
 
   const { data: subs } = await admin.from("push_subscriptions").select("user_id");
   const userIds = [...new Set((subs ?? []).map((s) => s.user_id as string))];
@@ -73,7 +76,7 @@ export async function GET(request: Request) {
           .select("date,type,amount,concept,merchant,category_id,recurring_id,category:categories(name)")
           .eq("household_id", householdId)
           .gte("date", prevStart)
-          .lte("date", today),
+          .lte("date", weekEnd),
         admin
           .from("challenges")
           .select("*")

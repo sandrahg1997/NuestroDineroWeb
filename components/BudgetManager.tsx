@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Budget, Category } from "@/lib/types";
 import Money from "@/components/Money";
@@ -29,6 +29,8 @@ export default function BudgetManager({
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const sorted = useMemo(() => [...rows].sort((a, b) => Number(b.amount) - Number(a.amount)), [rows]);
+  const totalSpent = useMemo(() => Object.values(spending).reduce((a, v) => a + v, 0), [spending]);
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -99,10 +101,8 @@ export default function BudgetManager({
         </button>
       </form>
       <div className="grid">
-        {rows.map((b) => {
-          const spent = b.category_id
-            ? (spending[b.category_id] ?? 0)
-            : Object.values(spending).reduce((a, v) => a + v, 0);
+        {sorted.map((b) => {
+          const spent = b.category_id ? (spending[b.category_id] ?? 0) : totalSpent;
           const pct = Math.min(100, (spent / b.amount) * 100);
           return (
             <div className="card" key={b.id}>
