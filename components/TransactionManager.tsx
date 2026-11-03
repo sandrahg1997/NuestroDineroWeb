@@ -127,6 +127,7 @@ export default function TransactionManager({
       .sort((a, b) => {
         const aDate = typeof a.date === "string" ? a.date : "";
         const bDate = typeof b.date === "string" ? b.date : "";
+        if (sort === "added_desc") return (b.created_at ?? "").localeCompare(a.created_at ?? "") || bDate.localeCompare(aDate);
         if (sort === "date_asc") return aDate.localeCompare(bDate);
         if (sort === "date_desc") return bDate.localeCompare(aDate);
         if (sort === "amount_asc") return a.amount - b.amount || bDate.localeCompare(aDate);
