@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { compareTransactions, nextSort } from "@/lib/transaction-sort";
 import { createClient } from "@/lib/supabase/client";
 import type { Category, Transaction, TransactionType } from "@/lib/types";
 import Money from "@/components/Money";
@@ -66,7 +67,13 @@ export default function TransactionManager({
     if (n === "expense" || n === "income") setForm(blankForm(n));
   }, [params]);
 
+  // Los filtros de un enlace se aplican solo al llegar: los refrescos de datos
+  // no deben devolver los que el usuario ya ha quitado.
+  const appliedParams = useRef<string | null>(null);
   useEffect(() => {
+    const key = params.toString();
+    if (key === appliedParams.current) return;
+    appliedParams.current = key;
     const t = params.get("type");
     const c = params.get("category");
     const period = periods.find((p) => p.id === params.get("period"));
@@ -77,10 +84,7 @@ export default function TransactionManager({
     if (c) change.category = c;
     if (from) change.dateFrom = from;
     if (to) change.dateTo = to;
-    if (Object.keys(change).length) {
-      setFilters((f) => ({ ...f, ...change }));
-      setFiltersOpen(true);
-    }
+    if (Object.keys(change).length) setFilters((f) => ({ ...f, ...change }));
   }, [params, periods]);
 
   // Filtrar por texto no en cada pulsación: espera a que el usuario pare.
@@ -124,14 +128,7 @@ export default function TransactionManager({
           (!dateTo || dateValue <= dateTo)
         );
       })
-      .sort((a, b) => {
-        const aDate = typeof a.date === "string" ? a.date : "";
-        const bDate = typeof b.date === "string" ? b.date : "";
-        if (sort === "date_asc") return aDate.localeCompare(bDate);
-        if (sort === "date_desc") return bDate.localeCompare(aDate) || (b.created_at ?? "").localeCompare(a.created_at ?? "");
-        if (sort === "amount_asc") return a.amount - b.amount || bDate.localeCompare(aDate);
-        return b.amount - a.amount || bDate.localeCompare(aDate);
-      });
+      .sort(compareTransactions(sort));
   }, [rows, debouncedQuery, filters]);
 
   const shown = useMemo(() => filtered.slice(0, visible), [filtered, visible]);
@@ -383,7 +380,8 @@ export default function TransactionManager({
         hasMore={filtered.length > visible}
         onMore={() => setVisible((v) => v + PAGE_SIZE)}
         isFiltering={isFiltering}
-        isDateSort={filters.sort === "date_desc" || filters.sort === "date_asc"}
+        sort={filters.sort}
+        onSort={(column) => setFilters((f) => ({ ...f, sort: nextSort(f.sort, column) }))}
         onEdit={edit}
         onRemove={remove}
         onClearFilters={clearFilters}

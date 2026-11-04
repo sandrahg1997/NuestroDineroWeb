@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { Inbox, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Inbox, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import Money from "@/components/Money";
+import { parseSort, type SortColumn, type TransactionSort } from "@/lib/transaction-sort";
 import type { Transaction } from "@/lib/types";
 import SwipeRow from "./SwipeRow";
 
@@ -29,6 +30,14 @@ function dayLabel(value: string | null | undefined) {
   return d.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
 }
 
+const COLUMNS: { column: SortColumn; label: string }[] = [
+  { column: "date", label: "Fecha" },
+  { column: "concept", label: "Concepto" },
+  { column: "category", label: "Categoría" },
+  { column: "type", label: "Tipo" },
+  { column: "amount", label: "Importe" },
+];
+
 export default function TransactionList({
   shown,
   total,
@@ -37,7 +46,8 @@ export default function TransactionList({
   hasMore,
   onMore,
   isFiltering,
-  isDateSort,
+  sort,
+  onSort,
   onEdit,
   onRemove,
   onClearFilters,
@@ -50,7 +60,8 @@ export default function TransactionList({
   hasMore: boolean;
   onMore: () => void;
   isFiltering: boolean;
-  isDateSort: boolean;
+  sort: TransactionSort;
+  onSort: (column: SortColumn) => void;
   onEdit: (r: Transaction) => void;
   onRemove: (r: Transaction) => void;
   onClearFilters: () => void;
@@ -59,6 +70,8 @@ export default function TransactionList({
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<CSSProperties>({});
   const [swipedId, setSwipedId] = useState<string | null>(null);
+  const { column: sortColumn, direction: sortDirection } = parseSort(sort);
+  const isDateSort = sortColumn === "date";
 
   useEffect(() => {
     if (!menuFor) return;
@@ -121,11 +134,21 @@ export default function TransactionList({
       <table className="table">
         <thead>
           <tr>
-            <th>Fecha</th>
-            <th>Concepto</th>
-            <th>Categoría</th>
-            <th>Tipo</th>
-            <th>Importe</th>
+            {COLUMNS.map(({ column, label }) => {
+              const active = sortColumn === column;
+              const Arrow = sortDirection === "asc" ? ArrowUp : ArrowDown;
+              return (
+                <th
+                  key={column}
+                  aria-sort={active ? (sortDirection === "asc" ? "ascending" : "descending") : undefined}
+                >
+                  <button type="button" className={`th-sort${active ? " active" : ""}`} onClick={() => onSort(column)}>
+                    {label}
+                    {active && <Arrow size={13} aria-hidden="true" />}
+                  </button>
+                </th>
+              );
+            })}
             <th>
               <span className="sr-only">Acciones</span>
             </th>

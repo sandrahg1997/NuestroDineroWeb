@@ -1,5 +1,6 @@
 "use client";
 
+import { DEFAULT_SORT, type TransactionSort } from "@/lib/transaction-sort";
 import type { Category, TransactionType } from "@/lib/types";
 
 export type Filters = {
@@ -7,12 +8,12 @@ export type Filters = {
   category: string;
   dateFrom: string;
   dateTo: string;
-  sort: "date_desc" | "date_asc" | "amount_desc" | "amount_asc";
+  sort: TransactionSort;
 };
 
 export type PeriodOption = { id: string; name: string; start_date: string; end_date: string };
 
-export const NO_FILTERS: Filters = { type: "all", category: "", dateFrom: "", dateTo: "", sort: "date_desc" };
+export const NO_FILTERS: Filters = { type: "all", category: "", dateFrom: "", dateTo: "", sort: DEFAULT_SORT };
 
 export function activeFilterCount(f: Filters) {
   return [f.type !== "all", !!f.category, !!(f.dateFrom || f.dateTo)].filter(Boolean).length;
@@ -117,6 +118,12 @@ export default function TransactionFilters({
         <option value="date_asc">Más antiguos</option>
         <option value="amount_desc">Mayor importe</option>
         <option value="amount_asc">Menor importe</option>
+        <option value="concept_asc">Concepto (A-Z)</option>
+        <option value="concept_desc">Concepto (Z-A)</option>
+        <option value="category_asc">Categoría (A-Z)</option>
+        <option value="category_desc">Categoría (Z-A)</option>
+        <option value="type_asc">Gastos primero</option>
+        <option value="type_desc">Ingresos primero</option>
       </select>
       {activeFilterCount(filters) > 0 && (
         <button

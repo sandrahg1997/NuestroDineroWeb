@@ -11,8 +11,10 @@ export const changelog: ChangelogEntry[] = [
     version: "2026-11-04",
     date: "4 de noviembre de 2026",
     items: [
-      "Cambiado: los movimientos vuelven a ordenarse por su fecha, de más reciente a más antiguo. Si hoy apuntas un gasto de octubre, aparece en octubre. Puedes ordenarlos por importe en los filtros.",
+      "Cambiado: los movimientos vuelven a ordenarse por su fecha, de más reciente a más antiguo. Si hoy apuntas un gasto de octubre, aparece en octubre.",
+      "Nuevo: en el ordenador, pulsa la cabecera de una columna de Movimientos (Fecha, Concepto, Categoría, Tipo o Importe) para ordenar de forma ascendente, y otra vez para invertir el orden. En el móvil tienes las mismas opciones en Filtros › Ordenar.",
       "Corregido: en el móvil, el menú ⋮ de cada movimiento no dejaba ver las opciones Editar y Eliminar.",
+      "Corregido: los filtros de Movimientos salen siempre cerrados y ya no vuelven solos después de quitarlos. Si hay alguno activo, lo verás en el número del botón Filtros.",
     ],
   },
   {
