@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { Inbox, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import Money from "@/components/Money";
 import type { Transaction } from "@/lib/types";
@@ -56,14 +57,21 @@ export default function TransactionList({
   onAdd: () => void;
 }) {
   const [menuFor, setMenuFor] = useState<string | null>(null);
-  const [menuOpenUp, setMenuOpenUp] = useState(false);
+  const [menuPos, setMenuPos] = useState<CSSProperties>({});
   const [swipedId, setSwipedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!menuFor) return;
     const close = () => setMenuFor(null);
     document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
+    // El menú va fijo a la pantalla: si la lista se mueve, se quedaría suelto.
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("click", close);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
   }, [menuFor]);
 
   const mobileGroups = useMemo(() => {
@@ -257,40 +265,47 @@ export default function TransactionList({
                             return;
                           }
                           const rect = e.currentTarget.getBoundingClientRect();
-                          setMenuOpenUp(window.innerHeight - rect.bottom < 180);
+                          const openUp = window.innerHeight - rect.bottom < 180;
+                          setMenuPos({
+                            right: document.documentElement.clientWidth - rect.right,
+                            ...(openUp ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }),
+                          });
                           setSwipedId(null);
                           setMenuFor(r.id);
                         }}
                       >
                         <MoreVertical size={18} />
                       </button>
-                      {menuFor === r.id && (
-                        <div className={`row-menu-popup ${menuOpenUp ? "open-up" : ""}`} role="menu">
-                          <button
-                            type="button"
-                            role="menuitem"
-                            onClick={() => {
-                              onEdit(r);
-                              setMenuFor(null);
-                            }}
-                          >
-                            <Pencil size={15} />
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="expense"
-                            onClick={() => {
-                              setMenuFor(null);
-                              onRemove(r);
-                            }}
-                          >
-                            <Trash2 size={15} />
-                            Eliminar
-                          </button>
-                        </div>
-                      )}
+                      {menuFor === r.id &&
+                        // En <body>: dentro de la fila quedaría tapado por las filas siguientes y recortado por la tarjeta.
+                        createPortal(
+                          <div className="row-menu-popup" style={menuPos} role="menu">
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                onEdit(r);
+                                setMenuFor(null);
+                              }}
+                            >
+                              <Pencil size={15} />
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="expense"
+                              onClick={() => {
+                                setMenuFor(null);
+                                onRemove(r);
+                              }}
+                            >
+                              <Trash2 size={15} />
+                              Eliminar
+                            </button>
+                          </div>,
+                          document.body
+                        )}
                     </div>
                   </div>
                 </div>

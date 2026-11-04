@@ -54,8 +54,7 @@
 .recurring-row .btn-ghost{padding:8px}
 
 .row-menu{position:relative}
-.row-menu-popup{position:absolute;right:0;top:calc(100% + 4px);background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px;display:grid;gap:2px;min-width:150px;z-index:120}
-.row-menu-popup.open-up{top:auto;bottom:calc(100% + 4px)}
+.row-menu-popup{position:fixed;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px;display:grid;gap:2px;min-width:150px;z-index:120}
 .row-menu-popup button{display:flex;align-items:center;gap:9px;width:100%;padding:9px 10px;border-radius:10px;background:transparent;border:0;color:var(--text);font-weight:650;cursor:pointer;text-align:left;font-size:13px}
 .row-menu-popup button:hover{background:#f3edf7}
 .row-menu-popup button.expense{color:var(--expense)}
