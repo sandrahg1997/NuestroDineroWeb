@@ -3,7 +3,13 @@ import type { Frequency, TransactionType } from "./types";
 import { dateKey } from "./utils";
 
 type ForecastRow = { type: TransactionType; amount: number | string; date: string; recurring_id?: string | null };
-type ForecastRecurring = { type: TransactionType; amount: number | string; frequency: Frequency; next_date: string };
+type ForecastRecurring = {
+  type: TransactionType;
+  amount: number | string;
+  frequency: Frequency;
+  next_date: string;
+  end_date?: string | null;
+};
 
 export type Forecast = {
   currentBalance: number;
@@ -21,10 +27,15 @@ const day = (value: string) => parseISO(value.slice(0, 10));
 // Fechas en las que un recurrente generará movimiento dentro de [from, to].
 // Encadena desde la fecha anterior igual que process_due_recurring en SQL, así que
 // un mensual del 31 pasa a 28 en febrero y se queda en 28 a partir de ahí.
-export function recurringOccurrences(r: Pick<ForecastRecurring, "frequency" | "next_date">, from: string, to: string) {
+// Si tiene fecha de finalización, no pasa de ella.
+export function recurringOccurrences(
+  r: Pick<ForecastRecurring, "frequency" | "next_date" | "end_date">,
+  from: string,
+  to: string
+) {
   const out: string[] = [];
   let d = day(r.next_date);
-  const end = day(to);
+  const end = day(r.end_date && r.end_date < to ? r.end_date : to);
   for (let guard = 0; d <= end && guard < 600; guard++) {
     const key = dateKey(d);
     if (key >= from) out.push(key);

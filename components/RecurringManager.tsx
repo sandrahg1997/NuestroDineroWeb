@@ -6,7 +6,7 @@ import type { Category, Frequency, RecurringTransaction, TransactionType } from 
 import { LoaderCircle, Pencil, Plus, Trash2, X } from "lucide-react";
 import Money from "@/components/Money";
 import { dateKey, monthlyEquivalent } from "@/lib/utils";
-import { daysUntil, dueLabel, frequencyLabel, parseAmount, sortRecurring } from "@/lib/recurring";
+import { daysUntil, dueLabel, frequencyLabel, isFinished, parseAmount, sortRecurring } from "@/lib/recurring";
 import { trapFocus, useToast } from "./Toast";
 import MoneyInput from "./MoneyInput";
 
@@ -19,6 +19,8 @@ type F = {
   note: string;
   frequency: Frequency;
   next_date: string;
+  has_end: boolean;
+  end_date: string;
   is_active: boolean;
 };
 const blank: F = {
@@ -29,9 +31,13 @@ const blank: F = {
   note: "",
   frequency: "monthly",
   next_date: dateKey(),
+  has_end: false,
+  end_date: "",
   is_active: true,
 };
 const nextDateLabel = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("es-ES");
+const endLabel = (r: RecurringTransaction) =>
+  `${isFinished(r) ? "Finalizó" : "Hasta"} el ${nextDateLabel(r.end_date!)}`;
 // Cobros en los próximos 7 días: se resaltan.
 const isDueSoon = (r: RecurringTransaction, today: string) => r.is_active && daysUntil(r.next_date, today) <= 7;
 export default function RecurringManager({
@@ -99,8 +105,21 @@ export default function RecurringManager({
       toast("Escribe un importe válido mayor que 0.", "error");
       return;
     }
+    const endDate = form.has_end ? form.end_date : null;
+    if (form.has_end && !endDate) {
+      toast("Elige la fecha de finalización o quita la opción.", "error");
+      return;
+    }
+    if (endDate && endDate < form.next_date) {
+      toast("La fecha de finalización no puede ser anterior a la próxima fecha.", "error");
+      return;
+    }
     setSaving(true);
     const s = createClient();
+    // Si estaba finalizado y ahora la fecha de fin lo permite, vuelve a estar activo.
+    const original = form.id ? rows.find((r) => r.id === form.id) : undefined;
+    const reopened =
+      !!original && isFinished(original) && !isFinished({ next_date: form.next_date, end_date: endDate });
     const payload = {
       household_id: householdId,
       concept: form.concept,
@@ -110,7 +129,8 @@ export default function RecurringManager({
       note: form.note,
       frequency: form.frequency,
       next_date: form.next_date,
-      is_active: form.is_active,
+      end_date: endDate,
+      is_active: reopened || form.is_active,
     };
     const q = form.id
       ? s.from("recurring_transactions").update(payload).eq("id", form.id)
@@ -127,6 +147,10 @@ export default function RecurringManager({
     setSaving(false);
   }
   async function toggle(r: RecurringTransaction) {
+    if (!r.is_active && isFinished(r)) {
+      toast("Este recurrente ya ha finalizado. Edita su fecha de finalización para reactivarlo.", "error");
+      return;
+    }
     setTogglingId(r.id);
     const s = createClient();
     const { data, error } = await s
@@ -158,6 +182,8 @@ export default function RecurringManager({
       note: r.note,
       frequency: r.frequency,
       next_date: r.next_date,
+      has_end: !!r.end_date,
+      end_date: r.end_date ?? "",
       is_active: r.is_active,
     });
   }
@@ -228,6 +254,7 @@ export default function RecurringManager({
                       {dueLabel(r.next_date, today)}
                     </div>
                   )}
+                  {r.end_date && <div className="subtitle">{endLabel(r)}</div>}
                 </td>
                 <td className={r.type === "expense" ? "expense" : "income"}>
                   <strong>
@@ -245,6 +272,8 @@ export default function RecurringManager({
                       <LoaderCircle size={14} className="spin" />
                     ) : r.is_active ? (
                       "Activo"
+                    ) : isFinished(r) ? (
+                      "Finalizado"
                     ) : (
                       "Pausado"
                     )}
@@ -299,6 +328,7 @@ export default function RecurringManager({
                         )}
                         {frequencyLabel(r.frequency)}
                         {r.category?.name ? ` · ${r.category.name}` : ""}
+                        {r.end_date ? ` · ${endLabel(r)}` : ""}
                       </span>
                     </div>
                     <div className="right">
@@ -316,6 +346,8 @@ export default function RecurringManager({
                             <LoaderCircle size={12} className="spin" />
                           ) : r.is_active ? (
                             "Activo"
+                          ) : isFinished(r) ? (
+                            "Finalizado"
                           ) : (
                             "Pausado"
                           )}
@@ -450,6 +482,32 @@ export default function RecurringManager({
                   onChange={(e) => setForm({ ...form, next_date: e.target.value })}
                 />
               </div>
+              <div className="field">
+                <label htmlFor="recurringmanager-fin">Finalización</label>
+                <select
+                  id="recurringmanager-fin"
+                  className="select"
+                  value={form.has_end ? "date" : "never"}
+                  onChange={(e) => setForm({ ...form, has_end: e.target.value === "date" })}
+                >
+                  <option value="never">Sin fecha de fin</option>
+                  <option value="date">Hasta una fecha</option>
+                </select>
+              </div>
+              {form.has_end && (
+                <div className="field">
+                  <label htmlFor="recurringmanager-fecha-fin">Fecha de finalización</label>
+                  <input
+                    id="recurringmanager-fecha-fin"
+                    className="input"
+                    type="date"
+                    min={form.next_date}
+                    value={form.end_date}
+                    onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                    required
+                  />
+                </div>
+              )}
             </div>
             <div className="field" style={{ marginTop: 14 }}>
               <label htmlFor="recurringmanager-nota">Nota</label>

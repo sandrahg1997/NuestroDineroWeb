@@ -52,7 +52,7 @@ create table public.recurring_transactions (
   id uuid primary key default gen_random_uuid(), household_id uuid not null references public.households(id) on delete cascade,
   concept text not null, amount numeric(12,2) not null check(amount>0), category_id uuid references public.categories(id) on delete set null,
   type transaction_type not null, note text not null default '', frequency recurrence_frequency not null default 'monthly',
-  next_date date not null default current_date, is_active boolean not null default true, created_at timestamptz not null default now()
+  next_date date not null default current_date, end_date date, is_active boolean not null default true, created_at timestamptz not null default now()
 );
 alter table public.transactions add constraint transactions_recurring_fk foreign key(recurring_id) references public.recurring_transactions(id) on delete set null;
 create unique index transactions_no_duplicate_recurrence on public.transactions(recurring_id,date) where recurring_id is not null;
@@ -213,7 +213,7 @@ begin
  if not is_household_member(p_household_id) then raise exception 'Sin permiso'; end if;
  for r in select * from recurring_transactions where household_id=p_household_id and is_active and next_date<=current_date for update loop
    d:=r.next_date; guard:=0;
-   while d<=current_date and guard<600 loop
+   while d<=current_date and (r.end_date is null or d<=r.end_date) and guard<600 loop
      insert into transactions(household_id,user_id,concept,amount,date,category_id,type,note,recurring_id)
      values(r.household_id,auth.uid(),r.concept,r.amount,d,r.category_id,r.type,r.note,r.id)
      on conflict do nothing;
@@ -221,7 +221,7 @@ begin
      d:=case r.frequency when 'weekly' then d+7 when 'monthly' then (d+interval '1 month')::date else (d+interval '1 year')::date end;
      guard:=guard+1;
    end loop;
-   update recurring_transactions set next_date=d where id=r.id;
+   update recurring_transactions set next_date=d, is_active=(r.end_date is null or d<=r.end_date) where id=r.id;
  end loop;
  return generated;
 end $$;
@@ -241,7 +241,7 @@ begin
    for update of rt
  loop
    d:=r.next_date; guard:=0;
-   while d<=current_date and guard<600 loop
+   while d<=current_date and (r.end_date is null or d<=r.end_date) and guard<600 loop
      insert into transactions(household_id,user_id,concept,amount,date,category_id,type,note,recurring_id)
      values(r.household_id,r.household_owner_id,r.concept,r.amount,d,r.category_id,r.type,r.note,r.id)
      on conflict do nothing;
@@ -249,7 +249,7 @@ begin
      d:=case r.frequency when 'weekly' then d+7 when 'monthly' then (d+interval '1 month')::date else (d+interval '1 year')::date end;
      guard:=guard+1;
    end loop;
-   update recurring_transactions set next_date=d where id=r.id;
+   update recurring_transactions set next_date=d, is_active=(r.end_date is null or d<=r.end_date) where id=r.id;
  end loop;
  return generated;
 end $$;

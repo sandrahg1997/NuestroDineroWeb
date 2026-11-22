@@ -13,6 +13,10 @@ export function sortRecurring<T extends Sortable>(rows: T[]): T[] {
   );
 }
 
+// Ya pasó su fecha de finalización: no generará más movimientos.
+export const isFinished = (r: { next_date: string; end_date?: string | null }) =>
+  !!r.end_date && r.next_date > r.end_date;
+
 export const frequencyLabel = (f: Frequency) => (f === "weekly" ? "Semanal" : f === "monthly" ? "Mensual" : "Anual");
 
 // Días entre dos fechas "YYYY-MM-DD" (negativo si ya pasó). Se calcula en UTC

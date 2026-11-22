@@ -75,7 +75,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       .lte("date", previousEnd),
     supabase
       .from("recurring_transactions")
-      .select("type,amount,frequency,next_date")
+      .select("type,amount,frequency,next_date,end_date")
       .eq("household_id", householdId)
       .eq("is_active", true),
     // Si la tabla de retos aún no existe (migración sin aplicar) viene vacío.
@@ -107,6 +107,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     amount: number | string;
     frequency: Frequency;
     next_date: string;
+    end_date: string | null;
   }[];
   const fixedMonthly = recurringRows
     .filter((r) => r.type === "expense")

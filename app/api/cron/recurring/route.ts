@@ -42,7 +42,8 @@ async function sendRecurringReminders(admin: SupabaseClient) {
     .from("recurring_transactions")
     .select("household_id,concept,amount,type")
     .eq("is_active", true)
-    .eq("next_date", tomorrow);
+    .eq("next_date", tomorrow)
+    .or(`end_date.is.null,end_date.gte.${tomorrow}`);
   if (!due?.length) return 0;
 
   const itemsByHousehold = new Map<string, ReminderItem[]>();

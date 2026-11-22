@@ -24,6 +24,18 @@ describe("recurringOccurrences", () => {
   });
 });
 
+describe("recurringOccurrences con fecha de fin", () => {
+  it("no pasa de end_date", () => {
+    expect(
+      recurringOccurrences(
+        { frequency: "weekly", next_date: "2026-01-05", end_date: "2026-01-15" },
+        "2026-01-01",
+        "2026-01-31"
+      )
+    ).toEqual(["2026-01-05", "2026-01-12"]);
+  });
+});
+
 describe("computeForecast", () => {
   const base = {
     today: "2026-01-10",

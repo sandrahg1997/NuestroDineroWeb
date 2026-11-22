@@ -35,6 +35,7 @@ export interface RecurringTransaction {
   note: string;
   frequency: Frequency;
   next_date: string;
+  end_date: string | null;
   is_active: boolean;
   category?: Category | null;
 }

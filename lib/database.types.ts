@@ -257,6 +257,7 @@ export type Database = {
           note: string;
           frequency: "weekly" | "monthly" | "yearly";
           next_date: string;
+          end_date: string | null;
           is_active: boolean;
           created_at: string;
         };
@@ -270,6 +271,7 @@ export type Database = {
           note?: string;
           frequency?: "weekly" | "monthly" | "yearly";
           next_date?: string;
+          end_date?: string | null;
           is_active?: boolean;
           created_at?: string;
         };
@@ -283,6 +285,7 @@ export type Database = {
           note?: string;
           frequency?: "weekly" | "monthly" | "yearly";
           next_date?: string;
+          end_date?: string | null;
           is_active?: boolean;
           created_at?: string;
         };
