@@ -88,3 +88,23 @@ export const merchantSuggestions: Record<string, string> = {
   mango: "Ropa",
   decathlon: "Ocio",
 };
+
+// Categoría sugerida para un comercio: primero lo que ya habéis elegido antes
+// (reglas aprendidas) y, si no, la lista de comercios conocidos. "" = sin sugerencia.
+export function suggestCategoryId(
+  merchant: string,
+  categories: { id: string; name: string; type: string }[],
+  rules: { merchant_pattern: string; category_id: string }[],
+  type: "expense" | "income" = "expense"
+) {
+  const m = merchant.toLowerCase();
+  if (!m.trim()) return "";
+  const learned = rules.find(
+    (r) => m.includes(r.merchant_pattern) && categories.some((c) => c.id === r.category_id && c.type === type)
+  );
+  if (learned) return learned.category_id;
+  const key = Object.keys(merchantSuggestions).find((k) => m.includes(k));
+  if (!key || type !== "expense") return "";
+  const name = merchantSuggestions[key].toLowerCase();
+  return categories.find((c) => c.type === "expense" && c.name.toLowerCase() === name)?.id ?? "";
+}

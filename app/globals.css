@@ -397,3 +397,13 @@ html,body{overscroll-behavior-y:contain}.pull-indicator{position:fixed;top:calc(
 .swipe-row{position:relative;border-bottom:1px solid var(--line)}.swipe-row:last-child{border-bottom:0}.swipe-row.swiping{overflow:hidden}.swipe-row .mobile-row{border-bottom:0}.swipe-content{position:relative;z-index:1;background:var(--card);transition:transform .2s ease;touch-action:pan-y}.swipe-actions{position:absolute;top:0;right:0;bottom:0;display:flex}.swipe-row:not(.swiping) .swipe-actions{visibility:hidden}.swipe-action{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:0;font:inherit;font-size:12px;font-weight:700;cursor:pointer}.swipe-action.edit{background:var(--tint);color:var(--primary)}.swipe-action.delete{background:#c3375a;color:#fff}
 .row-saving{opacity:.55}
 @media(prefers-reduced-motion:reduce){.swipe-content{transition:none}}
+
+/* Pendientes de confirmar (Apple Pay) */
+.pending-head{display:flex;align-items:center;gap:13px}
+.pending-warning{display:flex;gap:8px;align-items:flex-start;margin:12px 0 0;padding:10px 12px;border-radius:12px;background:#fff6e5;color:#8a5a00;font-size:13px;line-height:1.4}
+.pending-warning svg{flex:none;margin-top:1px}
+.nav-badge{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;display:inline-grid;place-items:center;background:var(--primary);color:#fff;font-size:11px;font-weight:700}
+.mobile-nav-dot{position:absolute;top:6px;right:calc(50% - 16px);width:9px;height:9px;border-radius:50%;background:var(--expense)}
+.mobile-nav .mobile-more{position:relative}
+:root[data-theme="dark"] .pending-warning{background:#3a2d12;color:#f0c46a}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .pending-warning{background:#3a2d12;color:#f0c46a}}

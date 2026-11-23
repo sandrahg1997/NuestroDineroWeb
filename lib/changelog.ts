@@ -8,6 +8,13 @@ export type ChangelogEntry = {
 // `version` debe ser único y ordenable (usamos fecha YYYY-MM-DD); `date` es el texto que se muestra.
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-11-23",
+    date: "23 de noviembre de 2026",
+    items: [
+      "Nuevo: pagos con Apple Pay en Pendientes. Cada pago llega solo a una bandeja, con el comercio, el importe y una categoría sugerida, y lo confirmas con un toque (o lo descartas). Si ya lo habías apuntado, te avisamos de que puede estar repetido. Se activa en Ajustes › Pagos con Apple Pay, con un atajo en cada iPhone.",
+    ],
+  },
+  {
     version: "2026-11-04",
     date: "4 de noviembre de 2026",
     items: [

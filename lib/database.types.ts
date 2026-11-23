@@ -489,9 +489,108 @@ export type Database = {
           },
         ];
       };
+      ingest_tokens: {
+        Row: {
+          id: string;
+          user_id: string;
+          household_id: string;
+          token_hash: string;
+          label: string;
+          last_used_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          household_id: string;
+          token_hash: string;
+          label?: string;
+          last_used_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          household_id?: string;
+          token_hash?: string;
+          label?: string;
+          last_used_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ingest_tokens_household_id_fkey";
+            columns: ["household_id"];
+            isOneToOne: false;
+            referencedRelation: "households";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      pending_transactions: {
+        Row: {
+          id: string;
+          household_id: string;
+          user_id: string | null;
+          merchant: string;
+          amount: number;
+          type: TransactionType;
+          date: string;
+          card: string;
+          raw_amount: string;
+          possible_duplicate: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          household_id: string;
+          user_id?: string | null;
+          merchant?: string;
+          amount: number;
+          type?: TransactionType;
+          date?: string;
+          card?: string;
+          raw_amount?: string;
+          possible_duplicate?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          household_id?: string;
+          user_id?: string | null;
+          merchant?: string;
+          amount?: number;
+          type?: TransactionType;
+          date?: string;
+          card?: string;
+          raw_amount?: string;
+          possible_duplicate?: boolean;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pending_transactions_household_id_fkey";
+            columns: ["household_id"];
+            isOneToOne: false;
+            referencedRelation: "households";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
+      confirm_pending_transaction: {
+        Args: {
+          p_id: string;
+          p_concept: string;
+          p_merchant: string;
+          p_amount: number;
+          p_date: string;
+          p_category_id: string | null;
+        };
+        Returns: string;
+      };
       create_personal_household: { Args: { p_name?: string }; Returns: string };
       delete_household: { Args: { p_household_id: string }; Returns: undefined };
       get_my_households: {

@@ -8,6 +8,7 @@ import { Copy, Download, LoaderCircle, Plus, TriangleAlert, Upload, User, Users 
 import { useToast } from "./Toast";
 import { useRouter } from "next/navigation";
 import NotificationSettings from "./NotificationSettings";
+import IngestSettings from "./IngestSettings";
 export default function SettingsManager({
   householdId,
   householdName,
@@ -364,6 +365,7 @@ export default function SettingsManager({
         weeklyReport={notifyWeeklyReport}
         recurringReminder={notifyRecurringReminder}
       />
+      <IngestSettings householdId={householdId} userId={userId} />
       <div className="card">
         <h2>
           <Users size={20} /> Finanzas compartidas

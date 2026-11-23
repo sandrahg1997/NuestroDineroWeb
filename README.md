@@ -21,6 +21,7 @@ Aplicación web responsive para gastos e ingresos compartidos. Está hecha con *
 - Previsión de cierre del periodo en Inicio (recurrentes pendientes + ritmo de gasto).
 - Reunión del mes: revisión del periodo en pareja con propuestas y acuerdos guardados.
 - Retos en pareja con racha y ahorro estimado.
+- Pagos con Apple Pay: un Atajo de iOS envía cada pago a `/api/ingest` y queda en **Pendientes** para confirmarlo con un toque (ver Ajustes › Pagos con Apple Pay).
 
 ## 1. Crear Supabase
 

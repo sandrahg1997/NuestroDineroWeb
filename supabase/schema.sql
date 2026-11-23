@@ -259,3 +259,39 @@ grant execute on function public.process_all_due_recurring() to service_role;
 create index transactions_household_date on transactions(household_id,date desc);
 create index categories_household on categories(household_id,type);
 create index recurring_due on recurring_transactions(household_id,next_date) where is_active;
+
+-- Gastos pendientes de confirmar (Apple Pay vía Atajos de iOS). Ver
+-- supabase/migrations/2026-11-23-pending-ingest.sql, que es idempotente.
+create table public.ingest_tokens (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  household_id uuid not null references public.households(id) on delete cascade,
+  token_hash text not null unique,
+  label text not null default 'iPhone',
+  last_used_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index ingest_tokens_user on public.ingest_tokens(user_id);
+create table public.pending_transactions (
+  id uuid primary key default gen_random_uuid(),
+  household_id uuid not null references public.households(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete set null,
+  merchant text not null default '',
+  amount numeric(12,2) not null check(amount>0),
+  type transaction_type not null default 'expense',
+  date date not null default current_date,
+  card text not null default '',
+  raw_amount text not null default '',
+  possible_duplicate boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index pending_household on public.pending_transactions(household_id, created_at desc);
+alter table public.ingest_tokens enable row level security;
+alter table public.pending_transactions enable row level security;
+create policy "own ingest tokens" on public.ingest_tokens for all
+  using(user_id=auth.uid()) with check(user_id=auth.uid() and public.is_household_member(household_id));
+create policy "household pending read" on public.pending_transactions for select using(public.is_household_member(household_id));
+create policy "household pending update" on public.pending_transactions for update
+  using(public.is_household_member(household_id)) with check(public.is_household_member(household_id));
+create policy "household pending delete" on public.pending_transactions for delete using(public.is_household_member(household_id));
+-- Las funciones confirm_pending_transaction y el trigger de tiempo real están en la migración.

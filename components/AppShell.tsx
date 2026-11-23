@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { HouseholdOption } from "@/lib/data";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useState, useTransition } from "react";
+import { type ReactNode, useCallback, useEffect, useState, useTransition } from "react";
 import {
   LayoutDashboard,
   ReceiptText,
@@ -23,6 +23,7 @@ import {
   Handshake,
   LoaderCircle,
   Trophy,
+  CreditCard,
 } from "lucide-react";
 import WhatsNewModal from "./WhatsNewModal";
 import { useToast } from "./Toast";
@@ -34,6 +35,7 @@ const items = [
   ["/transactions", ReceiptText, "Movimientos"],
   ["/categories", Tags, "Categorías"],
   ["/scan", ScanLine, "Escanear"],
+  ["/pending", CreditCard, "Pendientes"],
   ["/recurring", Repeat2, "Recurrentes"],
   ["/budgets", PiggyBank, "Presupuestos"],
   ["/periods", CalendarRange, "Periodos"],
@@ -78,7 +80,23 @@ export default function AppShell({
   // Cambios de la otra persona (u otro dispositivo) en tiempo real: se vuelven a
   // pedir los datos de la página actual sin recargarla.
   const activeHouseholdId = households.find((h) => h.is_active)?.household_id ?? households[0]?.household_id ?? null;
-  useHouseholdRealtime(activeHouseholdId, () => startLiveRefresh(() => router.refresh()));
+  // Pagos de Apple Pay por confirmar: se muestran como contador en el menú.
+  const [pendingCount, setPendingCount] = useState(0);
+  const loadPending = useCallback(async () => {
+    if (!activeHouseholdId) return;
+    const { count } = await createClient()
+      .from("pending_transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("household_id", activeHouseholdId);
+    setPendingCount(count ?? 0);
+  }, [activeHouseholdId]);
+  useEffect(() => {
+    loadPending().catch(() => {});
+  }, [loadPending, pathname]);
+  useHouseholdRealtime(activeHouseholdId, () => {
+    loadPending().catch(() => {});
+    startLiveRefresh(() => router.refresh());
+  });
 
   // Tirar hacia abajo desde arriba del todo para recargar (gesto habitual en móvil).
   useEffect(() => {
@@ -203,6 +221,11 @@ export default function AppShell({
             <Link className={pathname.startsWith(href) ? "active" : ""} href={href} key={href}>
               <Icon size={19} />
               {label}
+              {href === "/pending" && pendingCount > 0 && (
+                <span className="nav-badge" aria-label={`${pendingCount} por confirmar`}>
+                  {pendingCount}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
@@ -255,6 +278,9 @@ export default function AppShell({
           aria-controls="mobile-more-menu"
         >
           <MoreHorizontal size={20} /> Más
+          {pendingCount > 0 && (
+            <span className="mobile-nav-dot" aria-label={`${pendingCount} pendientes por confirmar`} />
+          )}
         </button>
       </nav>
 
@@ -273,6 +299,7 @@ export default function AppShell({
               >
                 <Icon size={18} />
                 {label}
+                {href === "/pending" && pendingCount > 0 && <span className="nav-badge">{pendingCount}</span>}
               </Link>
             ))}
           </div>
