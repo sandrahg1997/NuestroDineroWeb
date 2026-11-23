@@ -14,7 +14,7 @@ import {
   storeSavedFilters,
   type SavedFilter,
 } from "@/lib/saved-filters";
-import { Plus, Search, SlidersHorizontal } from "lucide-react";
+import { Download, LoaderCircle, Plus, Search, SlidersHorizontal } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "./Toast";
 import TransactionForm, { blankForm, type Form, type MerchantRule } from "./transactions/TransactionForm";
@@ -55,6 +55,7 @@ export default function TransactionManager({
   const [formResetKey, setFormResetKey] = useState(0);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [exporting, setExporting] = useState(false);
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [visible, setVisible] = useState(PAGE_SIZE);
@@ -175,6 +176,38 @@ export default function TransactionManager({
   }, [rows, debouncedQuery, filters]);
 
   const shown = useMemo(() => filtered.slice(0, visible), [filtered, visible]);
+
+  // Texto de los filtros activos para la hoja "Resumen" del Excel.
+  function filterLines() {
+    const lines: string[] = [];
+    if (debouncedQuery.trim()) lines.push(`Búsqueda: ${debouncedQuery.trim()}`);
+    if (filters.type !== "all") lines.push(`Tipo: ${filters.type === "expense" ? "Gastos" : "Ingresos"}`);
+    if (filters.category) {
+      const name =
+        filters.category === NO_CATEGORY ? "Sin categoría" : categories.find((c) => c.id === filters.category)?.name;
+      lines.push(`Categoría: ${name ?? filters.category}`);
+    }
+    if (filters.amountMin) lines.push(`Importe mínimo: ${filters.amountMin}`);
+    if (filters.amountMax) lines.push(`Importe máximo: ${filters.amountMax}`);
+    if (filters.dateFrom) lines.push(`Desde: ${filters.dateFrom}`);
+    if (filters.dateTo) lines.push(`Hasta: ${filters.dateTo}`);
+    return lines;
+  }
+
+  async function exportFiltered() {
+    if (!filtered.length) return toast("No hay movimientos que exportar con estos filtros.", "info");
+    setExporting(true);
+    try {
+      const { downloadTransactionsXlsx } = await import("@/lib/export-xlsx");
+      // Por fecha ascendente, como la exportación completa de Ajustes.
+      const list = [...filtered].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+      await downloadTransactionsXlsx(list, filterLines(), `ourmoney-movimientos-${dateKey()}.xlsx`);
+      toast(`Excel con ${list.length} movimiento${list.length === 1 ? "" : "s"} descargado.`, "success");
+    } catch (err) {
+      toast((err as Error)?.message || "No se pudo exportar el Excel.", "error");
+    }
+    setExporting(false);
+  }
   const isFiltering = !!debouncedQuery || filterCount > 0;
   const filteredExpense = useMemo(
     () => filtered.filter((r) => r.type === "expense").reduce((total, r) => total + Number(r.amount), 0),
@@ -382,6 +415,16 @@ export default function TransactionManager({
               {filterCount}
             </span>
           )}
+        </button>
+        <button
+          type="button"
+          className="btn btn-soft"
+          onClick={exportFiltered}
+          disabled={exporting}
+          title={isFiltering ? "Exportar solo lo filtrado" : "Exportar todos los movimientos"}
+        >
+          {exporting ? <LoaderCircle size={16} className="spin" /> : <Download size={16} />}
+          Exportar
         </button>
         <button type="button" className="btn btn-primary" onClick={() => addNew()}>
           <Plus size={17} />

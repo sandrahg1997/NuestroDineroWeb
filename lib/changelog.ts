@@ -8,6 +8,13 @@ export type ChangelogEntry = {
 // `version` debe ser único y ordenable (usamos fecha YYYY-MM-DD); `date` es el texto que se muestra.
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-11-28",
+    date: "28 de noviembre de 2026",
+    items: [
+      "Nuevo: botón «Exportar» en Movimientos. Descarga en Excel justo lo que estás viendo, con la búsqueda y los filtros que hayas puesto (tipo, categoría, importe, fechas). Incluye una hoja «Resumen» con los totales y los filtros aplicados.",
+    ],
+  },
+  {
     version: "2026-11-27",
     date: "27 de noviembre de 2026",
     items: [

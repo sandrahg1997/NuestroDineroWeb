@@ -173,26 +173,8 @@ export default function SettingsManager({
       return toast(error.message, "error");
     }
     try {
-      const XLSX = await import("xlsx");
-      const header = ["Fecha", "Tipo", "Concepto", "Comercio", "Importe", "Categoría", "Nota"];
-      const toDate = (v: string) => {
-        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || "");
-        return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : v;
-      };
-      const rows = (data ?? []).map((r) => ({
-        Fecha: toDate(r.date),
-        Tipo: r.type === "income" ? "Ingreso" : r.type === "expense" ? "Gasto" : r.type,
-        Concepto: r.concept ?? "",
-        Comercio: r.merchant ?? "",
-        Importe: typeof r.amount === "number" ? r.amount : Number(r.amount) || 0,
-        Categoría: r.category?.name ?? "",
-        Nota: r.note ?? "",
-      }));
-      const ws = XLSX.utils.json_to_sheet(rows, { header, cellDates: true });
-      ws["!cols"] = [{ wch: 12 }, { wch: 9 }, { wch: 28 }, { wch: 20 }, { wch: 10 }, { wch: 18 }, { wch: 30 }];
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Movimientos");
-      XLSX.writeFile(wb, `ourmoney-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      const { downloadTransactionsXlsx } = await import("@/lib/export-xlsx");
+      await downloadTransactionsXlsx(data ?? [], [], `ourmoney-${new Date().toISOString().slice(0, 10)}.xlsx`);
     } catch (err) {
       toast((err as Error)?.message || "No se pudo exportar el Excel.", "error");
     }
