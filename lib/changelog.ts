@@ -8,6 +8,44 @@ export type ChangelogEntry = {
 // `version` debe ser único y ordenable (usamos fecha YYYY-MM-DD); `date` es el texto que se muestra.
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-11-27",
+    date: "27 de noviembre de 2026",
+    items: [
+      "Nuevo: tu objetivo de ahorro más cercano aparece en Inicio, con su progreso y lo que toca apartar al mes. En la Reunión del mes hay un apartado de objetivos para decidir cuánto aportáis, con un botón para apuntarlo.",
+      "Nuevo: filtros guardados en Movimientos. Pon una búsqueda y filtros, pulsa «Guardar filtro» y vuelve a él con un toque. «Este mes», «Este año» y «Últimos 30 días» se recalculan solos. Se guardan en cada dispositivo.",
+      "Nuevo: en Movimientos puedes filtrar por importe (desde / hasta) y por «Sin categoría», y elegir fechas rápidas sin buscar el periodo.",
+      "Nuevo: informe del periodo para guardar en PDF o imprimir (botón «Informe PDF» en la Reunión y «Informe» en Periodos): resumen, gasto por categoría, presupuestos, mayores gastos, comercios, objetivos y acuerdos.",
+    ],
+  },
+  {
+    version: "2026-11-26",
+    date: "26 de noviembre de 2026",
+    items: [
+      "Nuevo: Objetivos de ahorro. Crea una meta compartida (un viaje, un colchón, una reforma…) con su cantidad y, si quieres, una fecha. Apuntad lo que vais apartando y verás el progreso y cuánto hay que guardar al mes para llegar a tiempo. Es un apunte aparte: no afecta a vuestros gastos ni ingresos.",
+      "Nuevo: sin conexión. La app guarda las pantallas que vas abriendo y, si te quedas sin cobertura, te enseña la última versión con un aviso de cuándo son esos datos. Solo se puede consultar: para guardar cambios hace falta conexión. Al cerrar sesión se borran de ese dispositivo.",
+      "Nuevo: copia de seguridad. En Ajustes puedes descargar todo el espacio en un fichero y restaurarlo cuando quieras. Al restaurar solo se añade lo que falte; nunca se borra ni se cambia nada.",
+    ],
+  },
+  {
+    version: "2026-11-25",
+    date: "25 de noviembre de 2026",
+    items: [
+      "Nuevo: nombres de comercio limpios. Los pagos con Apple Pay llegan como «MERCADONA ARANDA 0123» y ahora se guardan como «Mercadona Aranda». Si lo renombras al confirmar, la app lo recuerda para los siguientes pagos de ese comercio.",
+      "Nuevo: recordatorio de pagos sin confirmar. Si llevas dos días con pagos en Pendientes, te avisamos, y luego cada tres días mientras sigan ahí.",
+    ],
+  },
+  {
+    version: "2026-11-24",
+    date: "24 de noviembre de 2026",
+    items: [
+      "Nuevo: confirma de golpe. En Pendientes, «Confirmar listos» guarda todos los pagos que ya traen categoría y no parecen repetidos. En el móvil, desliza un pago hacia la izquierda para confirmarlo o descartarlo.",
+      "Nuevo: comercios que se guardan solos. Al confirmar un pago puedes marcar «Guardar siempre sin preguntar»; los siguientes pagos de ese comercio irán directos a Movimientos. Se puede deshacer en Ajustes › Pagos con Apple Pay.",
+      "Nuevo: si un pago llega pero no se puede leer, te avisamos y queda en Pendientes para añadirlo a mano, en vez de perderse.",
+      "Mejorado: el aviso de posible duplicado ahora compara también el comercio y mira un día antes y después, así que dos compras distintas con el mismo importe no se marcan por error.",
+      "Nuevo: Inicio te avisa de cuántos pagos tienes por confirmar, y en Pendientes se ve quién hizo cada pago.",
+    ],
+  },
+  {
     version: "2026-11-23",
     date: "23 de noviembre de 2026",
     items: [

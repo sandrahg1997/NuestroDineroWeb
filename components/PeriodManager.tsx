@@ -327,6 +327,9 @@ export default function PeriodManager({
                     <Link href={`/periods/${p.id}`} className="btn btn-ghost">
                       Ver resumen
                     </Link>
+                    <Link href={`/report?period=${p.id}`} className="btn btn-ghost">
+                      Informe
+                    </Link>
                     {!isActive && (
                       <button
                         type="button"

@@ -145,3 +145,62 @@ export function looksLikeToken(value: string) {
 
 // Máximo de pendientes sin revisar por hogar: protege de un atajo que se dispare en bucle.
 export const MAX_PENDING_PER_HOUSEHOLD = 200;
+
+const fold = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+// ¿Es el mismo comercio? Uno contiene al otro ("mercadona" / "MERCADONA ARANDA") o
+// comparten la primera palabra (4+ letras). Textos muy cortos no cuentan.
+export function sameMerchant(a: string, b: string) {
+  const x = fold(a);
+  const y = fold(b);
+  if (x.length < 3 || y.length < 3) return false;
+  if (x.includes(y) || y.includes(x)) return true;
+  const fx = x.split(" ")[0];
+  return fx.length >= 4 && fx === y.split(" ")[0];
+}
+
+// `candidates` son movimientos ya guardados con el mismo importe, tipo y fecha
+// (±1 día). Es duplicado probable si alguno es del mismo comercio o si no tiene
+// comercio con el que comparar. Dos tiendas distintas con el mismo importe el
+// mismo día NO cuentan: pasa más de lo que parece (un café de 2,00 €).
+export function isLikelyDuplicate(merchant: string, candidates: { merchant: string; concept: string }[]) {
+  return candidates.some((c) => {
+    const name = c.merchant.trim() || c.concept.trim();
+    if (!name || !merchant.trim()) return true;
+    return sameMerchant(merchant, name);
+  });
+}
+
+// Regla de "guardar sin preguntar" que encaja con el comercio: gana la más específica
+// (patrón más largo). Los patrones se guardan en minúsculas.
+export function findAutoRule<T extends { merchant_pattern: string }>(merchant: string, rules: T[]): T | null {
+  const m = merchant.toLowerCase();
+  if (m.trim().length < 3) return null;
+  let best: T | null = null;
+  for (const r of rules) {
+    const pattern = r.merchant_pattern.trim();
+    if (pattern.length < 3 || !m.includes(pattern)) continue;
+    if (!best || pattern.length > best.merchant_pattern.trim().length) best = r;
+  }
+  return best;
+}
+
+// Día anterior y siguiente en AAAA-MM-DD, para buscar duplicados con margen.
+export function dayRange(date: string, margin = 1): [string, string] {
+  const base = Date.parse(`${date}T12:00:00Z`);
+  const f = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+  return [f(base - margin * 86_400_000), f(base + margin * 86_400_000)];
+}
+
+// Recordatorio de pendientes olvidados: a los 2 días del más antiguo y luego cada 3
+// (2, 5, 8…), para avisar sin agobiar. `days` son los días desde que llegó el más antiguo.
+export function shouldRemindPending(days: number) {
+  return days >= 2 && (days - 2) % 3 === 0;
+}

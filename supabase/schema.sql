@@ -295,3 +295,6 @@ create policy "household pending update" on public.pending_transactions for upda
   using(public.is_household_member(household_id)) with check(public.is_household_member(household_id));
 create policy "household pending delete" on public.pending_transactions for delete using(public.is_household_member(household_id));
 -- Las funciones confirm_pending_transaction y el trigger de tiempo real están en la migración.
+
+-- Mejoras de Pendientes: ver supabase/migrations/2026-11-24-pending-improvements.sql
+-- (merchant_category_rules.auto_confirm y la tabla ingest_failures).

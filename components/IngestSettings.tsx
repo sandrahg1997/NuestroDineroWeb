@@ -6,12 +6,14 @@ import { generateToken, hashToken } from "@/lib/ingest";
 import { useToast } from "./Toast";
 
 type TokenRow = { id: string; label: string; last_used_at: string | null; created_at: string };
+type AutoRule = { id: string; merchant_pattern: string; category: { name: string; icon: string } | null };
 
 // Ajustes › Pagos con Apple Pay. El token en claro solo existe en este navegador
 // hasta que se cierra el aviso: en la base de datos se guarda únicamente su hash.
 export default function IngestSettings({ householdId, userId }: { householdId: string; userId: string }) {
   const { toast, confirm } = useToast();
   const [tokens, setTokens] = useState<TokenRow[] | null>(null);
+  const [autoRules, setAutoRules] = useState<AutoRule[]>([]);
   const [label, setLabel] = useState("iPhone");
   const [creating, setCreating] = useState(false);
   const [fresh, setFresh] = useState<string | null>(null);
@@ -31,6 +33,30 @@ export default function IngestSettings({ householdId, userId }: { householdId: s
   useEffect(() => {
     load().catch(() => setTokens([]));
   }, [load]);
+
+  // Comercios que se guardan solos. Si la migración de mejoras no está aplicada, falla y queda vacío.
+  const loadAuto = useCallback(async () => {
+    const { data } = await createClient()
+      .from("merchant_category_rules")
+      .select("id,merchant_pattern,category:categories(name,icon)")
+      .eq("household_id", householdId)
+      .eq("auto_confirm", true)
+      .order("merchant_pattern");
+    setAutoRules((data ?? []) as unknown as AutoRule[]);
+  }, [householdId]);
+  useEffect(() => {
+    loadAuto().catch(() => setAutoRules([]));
+  }, [loadAuto]);
+
+  async function stopAuto(rule: AutoRule) {
+    const { error } = await createClient()
+      .from("merchant_category_rules")
+      .update({ auto_confirm: false })
+      .eq("id", rule.id);
+    if (error) return toast(error.message, "error");
+    await loadAuto();
+    toast(`«${rule.merchant_pattern}» volverá a pedir confirmación`, "success");
+  }
 
   const copy = (text: string, done: string) =>
     navigator.clipboard.writeText(text).then(
@@ -133,6 +159,33 @@ export default function IngestSettings({ householdId, userId }: { householdId: s
             </li>
           ))}
         </ul>
+      )}
+
+      {autoRules.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <h3 style={{ margin: "0 0 4px", fontSize: 15 }}>Se guardan sin preguntar</h3>
+          <p className="subtitle" style={{ marginBottom: 8 }}>
+            Los pagos de estos comercios van directos a Movimientos. Los repetidos siguen pasando por Pendientes.
+          </p>
+          <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 6 }}>
+            {autoRules.map((r) => (
+              <li key={r.id} className="toolbar" style={{ justifyContent: "space-between" }}>
+                <span>
+                  <strong>{r.merchant_pattern}</strong>
+                  {r.category && (
+                    <span className="subtitle">
+                      {" "}
+                      · {r.category.icon} {r.category.name}
+                    </span>
+                  )}
+                </span>
+                <button type="button" className="btn btn-ghost" onClick={() => stopAuto(r)}>
+                  Volver a preguntar
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <details style={{ marginTop: 16 }}>

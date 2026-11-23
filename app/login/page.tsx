@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { clearOfflineData } from "@/lib/offline";
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -13,6 +14,12 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Al llegar aquí (cerrar sesión, sesión caducada, cuenta borrada) se borran las páginas
+  // guardadas para el modo sin conexión: llevan datos y no deben verlas quien entre ahora.
+  useEffect(() => {
+    clearOfflineData();
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

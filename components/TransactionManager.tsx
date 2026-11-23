@@ -4,7 +4,16 @@ import { compareTransactions, nextSort } from "@/lib/transaction-sort";
 import { createClient } from "@/lib/supabase/client";
 import type { Category, Transaction, TransactionType } from "@/lib/types";
 import Money from "@/components/Money";
-import { notifyPartnerActivity, TRANSACTION_LIST_FIELDS } from "@/lib/utils";
+import { dateKey, notifyPartnerActivity, TRANSACTION_LIST_FIELDS } from "@/lib/utils";
+import {
+  amountValue,
+  loadSavedFilters,
+  makeSavedFilter,
+  NO_CATEGORY,
+  resolveSavedFilter,
+  storeSavedFilters,
+  type SavedFilter,
+} from "@/lib/saved-filters";
 import { Plus, Search, SlidersHorizontal } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "./Toast";
@@ -16,6 +25,7 @@ import TransactionFilters, {
   type PeriodOption,
 } from "./transactions/TransactionFilters";
 import TransactionList, { isTemp } from "./transactions/TransactionList";
+import SavedFilters from "./transactions/SavedFilters";
 
 const PAGE_SIZE = 50;
 // Tiempo para pulsar "Deshacer" antes de borrar de verdad.
@@ -49,7 +59,10 @@ export default function TransactionManager({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [visible, setVisible] = useState(PAGE_SIZE);
   const params = useSearchParams();
-  const { toast } = useToast();
+  const { toast, askText } = useToast();
+  // Filtros guardados en este dispositivo (se leen al montar para no desajustar la hidratación).
+  const [saved, setSaved] = useState<SavedFilter[]>([]);
+  useEffect(() => setSaved(loadSavedFilters(householdId)), [householdId]);
   // Borrados en espera de que pase el plazo para deshacer.
   const pendingDeletes = useRef(new Map<string, PendingDelete>());
   // Dónde estaba el foco al abrir el formulario, para devolverlo al cerrarlo.
@@ -114,8 +127,36 @@ export default function TransactionManager({
   const filterCount = activeFilterCount(filters);
   const clearFilters = () => setFilters((f) => ({ ...NO_FILTERS, sort: f.sort }));
 
+  function applySaved(f: SavedFilter) {
+    const next = resolveSavedFilter(f, dateKey(), new Set(categories.map((c) => c.id)));
+    setQuery(next.query);
+    setFilters((cur) => ({ ...cur, ...next }));
+    setFiltersOpen(true);
+  }
+  async function saveCurrent() {
+    const name = await askText("¿Con qué nombre guardas este filtro?", {
+      placeholder: "Mercadona este año",
+      confirmLabel: "Guardar",
+    });
+    if (!name?.trim()) return;
+    const entry = makeSavedFilter(name, { query, ...filters }, dateKey());
+    // Mismo nombre = reemplaza el anterior.
+    const next = [...saved.filter((s) => s.name.toLowerCase() !== entry.name.toLowerCase()), entry];
+    if (!storeSavedFilters(householdId, next))
+      return toast("No se pudo guardar el filtro en este dispositivo.", "error");
+    setSaved(next);
+    toast("Filtro guardado", "success");
+  }
+  function deleteSaved(f: SavedFilter) {
+    const next = saved.filter((s) => s.id !== f.id);
+    storeSavedFilters(householdId, next);
+    setSaved(next);
+  }
+
   const filtered = useMemo(() => {
     const { type, category, dateFrom, dateTo, sort } = filters;
+    const min = amountValue(filters.amountMin);
+    const max = amountValue(filters.amountMax);
     return rows
       .filter((r) => {
         const dateValue = typeof r.date === "string" ? r.date : "";
@@ -123,7 +164,9 @@ export default function TransactionManager({
         return (
           (!debouncedQuery || text.includes(debouncedQuery.toLowerCase())) &&
           (type === "all" || r.type === type) &&
-          (!category || r.category_id === category) &&
+          (!category || (category === NO_CATEGORY ? !r.category_id : r.category_id === category)) &&
+          (min === null || Number(r.amount) >= min) &&
+          (max === null || Number(r.amount) <= max) &&
           (!dateFrom || dateValue >= dateFrom) &&
           (!dateTo || dateValue <= dateTo)
         );
@@ -345,6 +388,14 @@ export default function TransactionManager({
           Añadir
         </button>
       </div>
+
+      <SavedFilters
+        saved={saved}
+        canSave={!!query.trim() || filterCount > 0}
+        onApply={applySaved}
+        onDelete={deleteSaved}
+        onSave={saveCurrent}
+      />
 
       <TransactionFilters
         open={filtersOpen}

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { clearOfflineData } from "@/lib/offline";
 import { LoaderCircle, LogOut } from "lucide-react";
 import { useToast } from "./Toast";
 export default function LogoutButton() {
@@ -21,6 +22,7 @@ export default function LogoutButton() {
           setLeaving(false);
           return;
         }
+        await clearOfflineData();
         location.href = "/login";
       }}
     >

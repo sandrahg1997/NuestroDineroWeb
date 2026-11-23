@@ -9,6 +9,7 @@ import { useToast } from "./Toast";
 import { useRouter } from "next/navigation";
 import NotificationSettings from "./NotificationSettings";
 import IngestSettings from "./IngestSettings";
+import BackupSettings from "./BackupSettings";
 export default function SettingsManager({
   householdId,
   householdName,
@@ -366,6 +367,7 @@ export default function SettingsManager({
         recurringReminder={notifyRecurringReminder}
       />
       <IngestSettings householdId={householdId} userId={userId} />
+      <BackupSettings householdId={householdId} userId={userId} />
       <div className="card">
         <h2>
           <Users size={20} /> Finanzas compartidas

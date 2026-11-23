@@ -1,3 +1,4 @@
+import { shouldRemindPending } from "@/lib/ingest";
 import { buildRecurringReminder, type ReminderItem } from "@/lib/recurring";
 import { getNotificationPrefs, pushConfigured, sendPushToUsers, todayInSpain } from "@/lib/push";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -30,7 +31,14 @@ export async function GET(request: Request) {
     console.error("[recurring-reminders]", (err as Error).message);
   }
 
-  return NextResponse.json({ ok: true, generated: data ?? 0, reminded });
+  let pendingReminded = 0;
+  try {
+    pendingReminded = await sendPendingReminders(admin);
+  } catch (err) {
+    console.error("[pending-reminders]", (err as Error).message);
+  }
+
+  return NextResponse.json({ ok: true, generated: data ?? 0, reminded, pendingReminded });
 }
 
 // Avisa a los miembros de cada hogar de los recurrentes que se cobran mañana.
@@ -78,6 +86,56 @@ async function sendRecurringReminders(admin: SupabaseClient) {
       const reminder = buildRecurringReminder(items, prefs.get(id)?.hideAmounts ?? false);
       return reminder ? { ...reminder, url: "/recurring", tag: `recurring-${householdId}-${tomorrow}` } : null;
     });
+  }
+  return sent;
+}
+
+// Avisa a los miembros de los hogares que llevan días con pagos de Apple Pay sin
+// confirmar: a los 2 días del más antiguo y luego cada 3, para no agobiar.
+async function sendPendingReminders(admin: SupabaseClient) {
+  if (!pushConfigured()) return 0;
+  const { data: rows } = await admin.from("pending_transactions").select("household_id,created_at");
+  if (!rows?.length) return 0;
+
+  const byHousehold = new Map<string, { count: number; oldest: number }>();
+  for (const r of rows) {
+    const at = new Date(r.created_at as string).getTime();
+    const cur = byHousehold.get(r.household_id as string);
+    byHousehold.set(r.household_id as string, {
+      count: (cur?.count ?? 0) + 1,
+      oldest: Math.min(cur?.oldest ?? at, at),
+    });
+  }
+
+  const due = [...byHousehold.entries()]
+    .map(([householdId, v]) => ({
+      householdId,
+      count: v.count,
+      days: Math.floor((Date.now() - v.oldest) / 86_400_000),
+    }))
+    .filter((h) => shouldRemindPending(h.days));
+  if (!due.length) return 0;
+
+  const { data: members } = await admin
+    .from("household_members")
+    .select("household_id,user_id")
+    .in(
+      "household_id",
+      due.map((h) => h.householdId)
+    );
+
+  let sent = 0;
+  for (const h of due) {
+    const users = (members ?? []).filter((m) => m.household_id === h.householdId).map((m) => m.user_id as string);
+    sent += await sendPushToUsers(admin, users, () => ({
+      title: "OurMoney",
+      body:
+        h.count === 1
+          ? `Tienes 1 pago con Apple Pay sin confirmar desde hace ${h.days} días`
+          : `Tienes ${h.count} pagos con Apple Pay sin confirmar (el más antiguo, de hace ${h.days} días)`,
+      url: "/pending",
+      tag: `pending-reminder-${h.householdId}`,
+    }));
   }
   return sent;
 }

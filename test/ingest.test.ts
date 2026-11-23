@@ -1,13 +1,17 @@
 import { describe, it, expect } from "vitest";
 import {
+  dayRange,
+  extractFromText,
+  findAutoRule,
   generateToken,
   hashToken,
-  extractFromText,
   ingestSchema,
+  isLikelyDuplicate,
   looksLikeToken,
   normalizeIngest,
   parseAmount,
   parseIngestDate,
+  sameMerchant,
 } from "@/lib/ingest";
 import { suggestCategoryId } from "@/lib/receipt";
 
@@ -156,5 +160,51 @@ describe("extractFromText", () => {
   });
   it("sin importe no extrae nada", () => {
     expect(extractFromText("Hola mundo")).toEqual({ amount: "", merchant: "" });
+  });
+});
+
+describe("sameMerchant / isLikelyDuplicate", () => {
+  it("reconoce el mismo comercio con otro formato", () => {
+    expect(sameMerchant("MERCADONA ARANDA", "Mercadona")).toBe(true);
+    expect(sameMerchant("Mercadona Aranda", "mercadona burgos")).toBe(true);
+    expect(sameMerchant("Café Ñam", "cafe nam")).toBe(true);
+  });
+  it("distingue comercios distintos", () => {
+    expect(sameMerchant("Mercadona", "Lidl")).toBe(false);
+    expect(sameMerchant("", "Lidl")).toBe(false);
+  });
+  it("dos tiendas con el mismo importe no son duplicado", () => {
+    expect(isLikelyDuplicate("Bar Pepe", [{ merchant: "Panadería Sol", concept: "Pan" }])).toBe(false);
+  });
+  it("mismo comercio sí; sin comercio con el que comparar, también", () => {
+    expect(isLikelyDuplicate("Mercadona", [{ merchant: "", concept: "Mercadona compra" }])).toBe(true);
+    expect(isLikelyDuplicate("Mercadona", [{ merchant: "", concept: "" }])).toBe(true);
+    expect(isLikelyDuplicate("", [{ merchant: "Lidl", concept: "" }])).toBe(true);
+  });
+  it("sin candidatos no hay duplicado", () => {
+    expect(isLikelyDuplicate("Mercadona", [])).toBe(false);
+  });
+});
+
+describe("findAutoRule", () => {
+  const rules = [
+    { merchant_pattern: "mercadona", category_id: "a" },
+    { merchant_pattern: "mercadona express", category_id: "b" },
+  ];
+  it("elige el patrón más específico", () => {
+    expect(findAutoRule("MERCADONA EXPRESS CENTRO", rules)?.category_id).toBe("b");
+    expect(findAutoRule("Mercadona Aranda", rules)?.category_id).toBe("a");
+  });
+  it("sin coincidencia o comercio corto, nada", () => {
+    expect(findAutoRule("Lidl", rules)).toBeNull();
+    expect(findAutoRule("", rules)).toBeNull();
+    expect(findAutoRule("ab", [{ merchant_pattern: "ab" }])).toBeNull();
+  });
+});
+
+describe("dayRange", () => {
+  it("un día de margen, también al cruzar mes", () => {
+    expect(dayRange("2026-11-30")).toEqual(["2026-11-29", "2026-12-01"]);
+    expect(dayRange("2026-01-01")).toEqual(["2025-12-31", "2026-01-02"]);
   });
 });

@@ -8,6 +8,7 @@ import PageHeader from "@/components/PageHeader";
 import { challengeProgress, type Challenge } from "@/lib/challenges";
 import { getSessionContext } from "@/lib/data";
 import { computeForecast } from "@/lib/forecast";
+import { daysLeftLabel, pickFeaturedGoal, type Contribution, type Goal } from "@/lib/goals";
 import { computePeriodSummary } from "@/lib/period-summary";
 import type { Frequency, Period } from "@/lib/types";
 import {
@@ -20,7 +21,7 @@ import {
   savingsTier,
   transactionsHref,
 } from "@/lib/utils";
-import { ArrowDownRight, ArrowUpRight, PiggyBank, Plus, ReceiptText } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, CreditCard, PiggyBank, Plus, ReceiptText, Target } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -65,7 +66,27 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const previousEnd = previousPeriod?.end_date ?? new Date(rangeStart.getTime() - 86400000).toISOString().slice(0, 10);
 
   const todayKey = dateKey();
-  const [summary, { data: previousTx }, { data: activeRecurring }, { challenge, challengeTx }] = await Promise.all([
+  // Pagos con Apple Pay por confirmar (si la tabla aún no existe, el recuento es 0).
+  const pendingCountPromise = supabase
+    .from("pending_transactions")
+    .select("id", { count: "exact", head: true })
+    .eq("household_id", householdId);
+  // Objetivos de ahorro (si las tablas aún no existen, vienen vacías).
+  const goalsPromise = Promise.all([
+    supabase
+      .from("savings_goals")
+      .select("id,title,icon,target_amount,target_date,created_at")
+      .eq("household_id", householdId),
+    supabase.from("savings_contributions").select("goal_id,amount").eq("household_id", householdId),
+  ]);
+  const [
+    { count: pendingCount },
+    summary,
+    { data: previousTx },
+    { data: activeRecurring },
+    { challenge, challengeTx },
+  ] = await Promise.all([
+    pendingCountPromise,
     computePeriodSummary(supabase, householdId, selectedStart, selectedEnd, periodId),
     supabase
       .from("transactions")
@@ -101,6 +122,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         return { challenge, challengeTx: challengeTx ?? [] };
       }),
   ]);
+
+  const [{ data: goalRows }, { data: goalContributions }] = await goalsPromise;
+  const featuredGoal = pickFeaturedGoal(
+    (goalRows ?? []) as Pick<Goal, "id" | "title" | "icon" | "target_amount" | "target_date" | "created_at">[],
+    (goalContributions ?? []) as Pick<Contribution, "goal_id" | "amount">[],
+    todayKey
+  );
 
   const recurringRows = (activeRecurring ?? []) as {
     type: "expense" | "income";
@@ -274,6 +302,23 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     <AppShell households={households} hideAmounts={hideAmounts}>
       <PageHeader title={`Hola, ${firstName}`} subtitle={periodLabel} />
 
+      {(pendingCount ?? 0) > 0 && (
+        <Link href="/pending" className="pending-banner">
+          <span className="pending-banner-icon">
+            <CreditCard size={19} />
+          </span>
+          <span>
+            <strong>
+              {pendingCount === 1 ? "Tienes 1 pago por confirmar" : `Tienes ${pendingCount} pagos por confirmar`}
+            </strong>
+            <span className="subtitle" style={{ display: "block", fontSize: 13 }}>
+              Pagos con Apple Pay que esperan tu visto bueno.
+            </span>
+          </span>
+          <span className="nav-badge">{pendingCount}</span>
+        </Link>
+      )}
+
       <section className="dashboard-hero">
         <div className="hero-copy">
           <div className="dashboard-range-inline">
@@ -401,6 +446,42 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             </div>
           </dl>
         </section>
+      )}
+
+      {featuredGoal && (
+        <Link href="/goals" className="card goal-banner">
+          <span className="goal-icon" aria-hidden="true">
+            {featuredGoal.goal.icon}
+          </span>
+          <div className="goal-banner-main">
+            <span className="eyebrow">
+              <Target size={12} style={{ verticalAlign: "-1px" }} /> Objetivo de ahorro
+            </span>
+            <strong>{featuredGoal.goal.title}</strong>
+            <div
+              className="progress"
+              role="progressbar"
+              aria-label={`Progreso de ${featuredGoal.goal.title}`}
+              aria-valuenow={featuredGoal.progress.pct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <span style={{ width: `${featuredGoal.progress.pct}%` }} />
+            </div>
+            <span className="subtitle" style={{ fontSize: 13 }}>
+              <Money value={featuredGoal.progress.saved} /> de <Money value={Number(featuredGoal.goal.target_amount)} />{" "}
+              · {featuredGoal.progress.pct}%
+              {featuredGoal.goal.target_date && ` · ${daysLeftLabel(featuredGoal.progress.daysLeft)}`}
+              {featuredGoal.progress.monthlyNeeded != null && (
+                <>
+                  {" "}
+                  · <Money value={featuredGoal.progress.monthlyNeeded} />
+                  /mes
+                </>
+              )}
+            </span>
+          </div>
+        </Link>
       )}
 
       <section className="dashboard-insights">

@@ -24,6 +24,7 @@ import {
   LoaderCircle,
   Trophy,
   CreditCard,
+  Target,
 } from "lucide-react";
 import WhatsNewModal from "./WhatsNewModal";
 import { useToast } from "./Toast";
@@ -38,6 +39,7 @@ const items = [
   ["/pending", CreditCard, "Pendientes"],
   ["/recurring", Repeat2, "Recurrentes"],
   ["/budgets", PiggyBank, "Presupuestos"],
+  ["/goals", Target, "Objetivos"],
   ["/periods", CalendarRange, "Periodos"],
   ["/historico", History, "Histórico"],
   ["/reunion", Handshake, "Reunión"],

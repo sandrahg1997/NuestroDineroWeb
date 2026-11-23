@@ -4,11 +4,12 @@ import PageHeader from "@/components/PageHeader";
 import ReviewAgreements from "@/components/ReviewAgreements";
 import { baselineDaily, challengeProgress, type Challenge } from "@/lib/challenges";
 import { getSessionContext } from "@/lib/data";
+import { daysLeftLabel, goalProgress, type Contribution, type Goal } from "@/lib/goals";
 import { computePeriodSummary } from "@/lib/period-summary";
 import { buildPeriodReview } from "@/lib/review";
 import type { Frequency, Period } from "@/lib/types";
 import { dateKey, formatDateEs, monthlyEquivalent, transactionsHref } from "@/lib/utils";
-import { CalendarRange, Handshake } from "lucide-react";
+import { CalendarRange, Handshake, Target } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -112,6 +113,23 @@ export default async function ReunionPage({ searchParams }: { searchParams: Prom
       .in("period_id", [period.id, ...(previousPeriod ? [previousPeriod.id] : [])]),
   ]);
 
+  // Objetivos de ahorro (si las tablas aún no existen, vienen vacías).
+  const [{ data: goalRows }, { data: contributionRows }] = await Promise.all([
+    supabase.from("savings_goals").select("*").eq("household_id", householdId).order("created_at"),
+    supabase.from("savings_contributions").select("*").eq("household_id", householdId),
+  ]);
+  const goals = ((goalRows ?? []) as Goal[]).map((goal) => {
+    const own = ((contributionRows ?? []) as Contribution[]).filter((c) => c.goal_id === goal.id);
+    return {
+      goal,
+      progress: goalProgress(goal, own, today),
+      // Lo apartado durante el periodo que se está revisando.
+      inPeriod: own
+        .filter((c) => c.date >= period.start_date && c.date <= period.end_date)
+        .reduce((t, c) => t + Number(c.amount), 0),
+    };
+  });
+
   const rows = (current ?? []) as unknown as ReviewTx[];
   const previousRows = (previous ?? []) as unknown as ReviewTx[];
   const recurringMonthly = ((recurring ?? []) as { amount: number | string; frequency: Frequency }[]).reduce(
@@ -163,6 +181,11 @@ export default async function ReunionPage({ searchParams }: { searchParams: Prom
       <PageHeader
         title="Reunión del mes"
         subtitle={`${period.name} · ${formatDateEs(period.start_date)} – ${formatDateEs(period.end_date)}`}
+        actions={
+          <Link href={`/report?period=${period.id}`} className="btn btn-soft">
+            Informe PDF
+          </Link>
+        }
       />
 
       {recentPeriods.length > 1 && (
@@ -335,6 +358,75 @@ export default async function ReunionPage({ searchParams }: { searchParams: Prom
             </section>
           )}
         </>
+      )}
+
+      {goals.length > 0 && (
+        <section className="card" style={{ marginBottom: 18 }}>
+          <span className="eyebrow">
+            <Target size={13} style={{ verticalAlign: "-2px" }} /> 🎯 Objetivos de ahorro
+          </span>
+          <p className="subtitle" style={{ margin: "4px 0 12px" }}>
+            Decidid cuánto apartáis este mes. La cuota es lo que habría que guardar cada mes para llegar a tiempo.
+          </p>
+          <ul className="review-list goals-review">
+            {goals.map(({ goal, progress, inPeriod }) => (
+              <li key={goal.id}>
+                <div className="goals-review-main">
+                  <strong>
+                    {goal.icon} {goal.title}
+                  </strong>
+                  <div
+                    className="progress"
+                    role="progressbar"
+                    aria-label={`Progreso de ${goal.title}`}
+                    aria-valuenow={progress.pct}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  >
+                    <span style={{ width: `${progress.pct}%` }} />
+                  </div>
+                  <span className="subtitle" style={{ fontSize: 13 }}>
+                    <Money value={progress.saved} /> de <Money value={Number(goal.target_amount)} /> · {progress.pct}%
+                    {goal.target_date && ` · ${daysLeftLabel(progress.daysLeft)}`}
+                    {inPeriod !== 0 && (
+                      <>
+                        {" "}
+                        · en {period.name}: {inPeriod > 0 ? "+" : "−"}
+                        <Money value={Math.abs(inPeriod)} />
+                      </>
+                    )}
+                  </span>
+                  <span className={`goal-hint ${progress.status}`} style={{ margin: 0 }}>
+                    {progress.status === "done" && "🎉 Cumplido"}
+                    {progress.status === "no-date" && (
+                      <>
+                        Faltan <Money value={progress.remaining} />
+                      </>
+                    )}
+                    {progress.status === "late" && (
+                      <>
+                        Fecha vencida, faltan <Money value={progress.remaining} />
+                      </>
+                    )}
+                    {(progress.status === "on-track" || progress.status === "behind") &&
+                      progress.monthlyNeeded != null && (
+                        <>
+                          {progress.status === "on-track" ? "A buen ritmo" : "Algo por detrás"} · cuota:{" "}
+                          <Money value={progress.monthlyNeeded} />
+                          /mes
+                        </>
+                      )}
+                  </span>
+                </div>
+                {!progress.done && (
+                  <Link href={`/goals?contribute=${goal.id}`} className="btn btn-soft">
+                    Aportar
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <section className="review-grid">

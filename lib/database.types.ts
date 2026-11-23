@@ -349,12 +349,20 @@ export type Database = {
         ];
       };
       merchant_category_rules: {
-        Row: { id: string; household_id: string; merchant_pattern: string; category_id: string; created_at: string };
+        Row: {
+          id: string;
+          household_id: string;
+          merchant_pattern: string;
+          category_id: string;
+          auto_confirm: boolean;
+          created_at: string;
+        };
         Insert: {
           id?: string;
           household_id: string;
           merchant_pattern: string;
           category_id: string;
+          auto_confirm?: boolean;
           created_at?: string;
         };
         Update: {
@@ -362,6 +370,7 @@ export type Database = {
           household_id?: string;
           merchant_pattern?: string;
           category_id?: string;
+          auto_confirm?: boolean;
           created_at?: string;
         };
         Relationships: [
@@ -489,6 +498,130 @@ export type Database = {
           },
         ];
       };
+      savings_goals: {
+        Row: {
+          id: string;
+          household_id: string;
+          title: string;
+          icon: string;
+          target_amount: number;
+          target_date: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          household_id: string;
+          title: string;
+          icon?: string;
+          target_amount: number;
+          target_date?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          household_id?: string;
+          title?: string;
+          icon?: string;
+          target_amount?: number;
+          target_date?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "savings_goals_household_id_fkey";
+            columns: ["household_id"];
+            isOneToOne: false;
+            referencedRelation: "households";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      savings_contributions: {
+        Row: {
+          id: string;
+          goal_id: string;
+          household_id: string;
+          user_id: string | null;
+          amount: number;
+          date: string;
+          note: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          goal_id: string;
+          household_id: string;
+          user_id?: string | null;
+          amount: number;
+          date?: string;
+          note?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          goal_id?: string;
+          household_id?: string;
+          user_id?: string | null;
+          amount?: number;
+          date?: string;
+          note?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "savings_contributions_goal_id_fkey";
+            columns: ["goal_id"];
+            isOneToOne: false;
+            referencedRelation: "savings_goals";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      merchant_aliases: {
+        Row: { id: string; household_id: string; key: string; name: string; created_at: string };
+        Insert: { id?: string; household_id: string; key: string; name: string; created_at?: string };
+        Update: { id?: string; household_id?: string; key?: string; name?: string; created_at?: string };
+        Relationships: [
+          {
+            foreignKeyName: "merchant_aliases_household_id_fkey";
+            columns: ["household_id"];
+            isOneToOne: false;
+            referencedRelation: "households";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      ingest_failures: {
+        Row: { id: string; household_id: string; user_id: string | null; reason: string; raw: string; created_at: string };
+        Insert: {
+          id?: string;
+          household_id: string;
+          user_id?: string | null;
+          reason?: string;
+          raw?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          household_id?: string;
+          user_id?: string | null;
+          reason?: string;
+          raw?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ingest_failures_household_id_fkey";
+            columns: ["household_id"];
+            isOneToOne: false;
+            referencedRelation: "households";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       ingest_tokens: {
         Row: {
           id: string;
@@ -538,6 +671,7 @@ export type Database = {
           date: string;
           card: string;
           raw_amount: string;
+          raw_merchant: string;
           possible_duplicate: boolean;
           created_at: string;
         };
@@ -551,6 +685,7 @@ export type Database = {
           date?: string;
           card?: string;
           raw_amount?: string;
+          raw_merchant?: string;
           possible_duplicate?: boolean;
           created_at?: string;
         };
@@ -564,6 +699,7 @@ export type Database = {
           date?: string;
           card?: string;
           raw_amount?: string;
+          raw_merchant?: string;
           possible_duplicate?: boolean;
           created_at?: string;
         };
