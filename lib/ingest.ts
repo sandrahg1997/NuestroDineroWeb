@@ -34,11 +34,14 @@ export function parseAmount(input: unknown): number | null {
 
 // Cuerpo que manda el atajo. Todo viene como texto y puede venir vacío o con
 // variables sin sustituir, así que se valida con tolerancia y se limita el tamaño.
+// `amount` y `merchant` son lo ideal; si el atajo solo puede mandar la transacción
+// entera como texto, llega en `text` y de ahí se extraen los datos.
 export const ingestSchema = z.object({
   merchant: z.string().trim().max(120).optional().default(""),
-  amount: z.union([z.string().max(40), z.number()]),
+  amount: z.union([z.string().max(40), z.number()]).optional(),
   card: z.string().trim().max(80).optional().default(""),
   date: z.string().trim().max(40).optional().default(""),
+  text: z.string().trim().max(500).optional().default(""),
 });
 
 export type IngestPayload = z.infer<typeof ingestSchema>;
@@ -51,16 +54,46 @@ export type NormalizedIngest = {
   rawAmount: string;
 };
 
+const MONEY_IN_TEXT =
+  /[-−–]?\s?(?:\d{1,3}(?:[.\s]\d{3})+|\d+)(?:[.,]\d{1,2})?\s?(?:€|eur\b|euros?\b)|[-−–]?\s?(?:\d{1,3}(?:[.\s]\d{3})+|\d+)[.,]\d{2}(?!\d)/i;
+
+// Saca importe y comercio de un texto libre tipo "Mercadona 12,50 €" o
+// "Comerciante: Mercadona\nCantidad: 12,50 €". El comercio es lo que queda al
+// quitar el importe y las etiquetas más habituales.
+export function extractFromText(text: string): { amount: string; merchant: string } {
+  const match = text.match(MONEY_IN_TEXT);
+  if (!match) return { amount: "", merchant: "" };
+  const rest = text
+    .replace(match[0], " ")
+    .split(/\r?\n|\s[·|•]\s/)
+    .map((line) =>
+      line
+        .replace(/^\s*(comerciante|comercio|merchant|cantidad|importe|amount|tarjeta|card|nombre|name)\s*[:=-]\s*/i, "")
+        .replace(/\s+/g, " ")
+        .trim()
+    )
+    .filter((line) => /[a-záéíóúüñ]{2}/i.test(line));
+  return { amount: match[0].trim(), merchant: rest[0] ?? "" };
+}
+
 // Aplica `parseAmount` y decide el tipo: un importe negativo (devolución) es un ingreso.
 export function normalizeIngest(payload: IngestPayload): NormalizedIngest | null {
-  const parsed = parseAmount(payload.amount);
+  let amountInput = payload.amount;
+  let merchant = payload.merchant;
+  const hasAmount = amountInput !== undefined && parseAmount(amountInput) != null;
+  if (!hasAmount && payload.text) {
+    const found = extractFromText(payload.text);
+    amountInput = found.amount;
+    if (!merchant) merchant = found.merchant;
+  }
+  const parsed = parseAmount(amountInput);
   if (parsed == null || parsed === 0 || Math.abs(parsed) > 1_000_000) return null;
   return {
-    merchant: payload.merchant.replace(/\s+/g, " ").trim(),
+    merchant: merchant.replace(/\s+/g, " ").trim(),
     amount: Math.abs(parsed),
     type: parsed < 0 ? "income" : "expense",
     card: payload.card,
-    rawAmount: String(payload.amount).slice(0, 40),
+    rawAmount: String(amountInput).slice(0, 40),
   };
 }
 

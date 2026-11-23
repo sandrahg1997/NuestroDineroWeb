@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   generateToken,
   hashToken,
+  extractFromText,
   ingestSchema,
   looksLikeToken,
   normalizeIngest,
@@ -69,8 +70,18 @@ describe("normalizeIngest", () => {
     expect(normalizeIngest(parsed)?.amount).toBe(5);
   });
 
-  it("sin importe no pasa la validación", () => {
-    expect(ingestSchema.safeParse({ merchant: "x" }).success).toBe(false);
+  it("sin importe ni texto no vale", () => {
+    expect(normalizeIngest(ingestSchema.parse({ merchant: "x" }))).toBeNull();
+  });
+
+  it("si solo llega el texto, saca importe y comercio de ahí", () => {
+    const r = normalizeIngest(ingestSchema.parse({ text: "Mercadona 12,50 €" }));
+    expect(r).toMatchObject({ merchant: "Mercadona", amount: 12.5, type: "expense" });
+  });
+
+  it("un amount válido manda sobre el texto", () => {
+    const r = normalizeIngest(ingestSchema.parse({ amount: "3,00", merchant: "Bar", text: "Otro 99,99 €" }));
+    expect(r).toMatchObject({ merchant: "Bar", amount: 3 });
   });
 });
 
@@ -130,5 +141,20 @@ describe("suggestCategoryId", () => {
   });
   it("no sugiere categorías de gasto para un ingreso", () => {
     expect(suggestCategoryId("Mercadona", categories, [], "income")).toBe("");
+  });
+});
+
+describe("extractFromText", () => {
+  it("formatos con etiquetas", () => {
+    expect(extractFromText("Comerciante: Lidl\nCantidad: 8,99 €")).toEqual({ amount: "8,99 €", merchant: "Lidl" });
+  });
+  it("separado por puntos medios", () => {
+    expect(extractFromText("Repsol · 45,30 €")).toEqual({ amount: "45,30 €", merchant: "Repsol" });
+  });
+  it("importe negativo", () => {
+    expect(extractFromText("Zara -19,95 €").amount).toBe("-19,95 €");
+  });
+  it("sin importe no extrae nada", () => {
+    expect(extractFromText("Hola mundo")).toEqual({ amount: "", merchant: "" });
   });
 });
