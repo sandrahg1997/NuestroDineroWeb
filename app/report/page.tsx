@@ -1,7 +1,9 @@
 import AppShell from "@/components/AppShell";
 import Money from "@/components/Money";
 import PageHeader from "@/components/PageHeader";
+import ExportButton from "@/components/ExportButton";
 import PrintButton from "@/components/PrintButton";
+import { reportSheets } from "@/lib/export-sheets";
 import { getSessionContext } from "@/lib/data";
 import { fetchAll } from "@/lib/fetch-all";
 import { daysLeftLabel, goalProgress, type Contribution, type Goal } from "@/lib/goals";
@@ -91,6 +93,14 @@ export default async function ReportPage({ searchParams }: { searchParams: Promi
   const agreements = (review?.agreements ?? "").trim();
   const householdName = households.find((h) => h.household_id === householdId)?.name ?? "Nuestro hogar";
   const recent = periods.slice(-6).reverse();
+  const excelSheets = reportSheets({
+    periodName: period.name,
+    start: period.start_date,
+    end: period.end_date,
+    report,
+    budgets: summary.budgets.map((b) => ({ name: b.name, amount: b.amount, spent: b.spent })),
+    transactions: rows,
+  });
 
   return (
     <AppShell households={households} hideAmounts={hideAmounts}>
@@ -98,7 +108,12 @@ export default async function ReportPage({ searchParams }: { searchParams: Promi
         <PageHeader
           title="Informe del periodo"
           subtitle="Un resumen para guardar en PDF o imprimir y llevar a la reunión."
-          actions={<PrintButton />}
+          actions={
+            <div className="toolbar no-print" style={{ gap: 8 }}>
+              <ExportButton sheets={excelSheets} fileName={`ourmoney-informe-${period.start_date}.xlsx`} />
+              <PrintButton />
+            </div>
+          }
         />
         {recent.length > 1 && (
           <div className="chip-row" style={{ marginBottom: 18 }}>

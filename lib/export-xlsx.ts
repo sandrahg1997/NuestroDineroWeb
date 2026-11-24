@@ -8,7 +8,7 @@ export type ExportRow = {
   merchant?: string | null;
   amount: number | string;
   note?: string | null;
-  category?: { name: string } | null;
+  category?: { name?: string } | null;
 };
 
 export const EXPORT_HEADER = ["Fecha", "Tipo", "Concepto", "Comercio", "Importe", "Categoría", "Nota"] as const;
@@ -57,5 +57,39 @@ export async function downloadTransactionsXlsx(list: ExportRow[], filterLines: s
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Movimientos");
   XLSX.utils.book_append_sheet(wb, summary, "Resumen");
+  XLSX.writeFile(wb, fileName);
+}
+
+// ---- Libros de varias hojas (informe, presupuestos, recurrentes, objetivos) ----
+
+export type Cell = string | number | null;
+export type SheetData = {
+  name: string;
+  rows: Cell[][];
+  /** Anchos de columna en caracteres. */
+  widths?: number[];
+  /** Columnas (desde 0) con importes en euros: se les da formato de moneda. */
+  moneyCols?: number[];
+};
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+// Los nombres de hoja de Excel: máximo 31 caracteres y sin : \ / ? * [ ]
+export const sheetName = (name: string) => name.replace(/[:\\/?*[\]]/g, " ").trim().slice(0, 31) || "Hoja";
+
+export async function downloadWorkbook(sheets: SheetData[], fileName: string) {
+  const XLSX = await import("xlsx");
+  const wb = XLSX.utils.book_new();
+  for (const sheet of sheets) {
+    const rows = sheet.rows.map((row) => row.map((c) => (typeof c === "string" && ISO_DATE.test(c) ? toDate(c) : c)));
+    const ws = XLSX.utils.aoa_to_sheet(rows, { cellDates: true });
+    if (sheet.widths) ws["!cols"] = sheet.widths.map((wch) => ({ wch }));
+    for (const col of sheet.moneyCols ?? []) {
+      rows.forEach((row, r) => {
+        const cell = ws[XLSX.utils.encode_cell({ r, c: col })];
+        if (cell && cell.t === "n") cell.z = '#,##0.00 "€"';
+      });
+    }
+    XLSX.utils.book_append_sheet(wb, ws, sheetName(sheet.name));
+  }
   XLSX.writeFile(wb, fileName);
 }

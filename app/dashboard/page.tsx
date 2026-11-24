@@ -159,6 +159,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const { rows, expense, income, balance, savingsRate, categoryData, byDay, topCategory, budgetTotal, budgets } =
     summary;
   const expenseChange = percentChange(expense, previousExpense);
+  // Cómo cerró el periodo anterior (solo si existe de verdad, no el tramo equivalente).
+  const previousIncome = ((previousTx ?? []) as unknown as { amount: number | string; type: string }[])
+    .filter((item) => item.type === "income")
+    .reduce((total, item) => total + Number(item.amount), 0);
+  const previousBalance = Math.round((previousIncome - previousExpense) * 100) / 100;
   const firstName =
     user.user_metadata?.display_name?.split(" ")[0] ||
     user.user_metadata?.full_name?.split(" ")[0] ||
@@ -339,6 +344,15 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               anterior
             </span>
           </div>
+          {previousPeriod && (
+            <Link href={`/dashboard?period=${previousPeriod.id}`} className="hero-previous">
+              <span>Cierre de «{previousPeriod.name}»</span>
+              <strong className={previousBalance >= 0 ? "income" : "expense"}>
+                {previousBalance >= 0 ? "+" : ""}
+                <Money value={previousBalance} />
+              </strong>
+            </Link>
+          )}
         </div>
         <HeroMark />
       </section>

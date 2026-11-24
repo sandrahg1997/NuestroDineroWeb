@@ -480,3 +480,9 @@ html,body{overscroll-behavior-y:contain}.pull-indicator{position:fixed;top:calc(
   .progress,.progress>span{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   @page{margin:14mm}
 }
+
+/* Cierre del periodo anterior, bajo el balance de Inicio (el hero es oscuro) */
+.hero-previous{display:flex;width:fit-content;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:10px;padding:6px 11px;border:1px solid rgba(255,255,255,.16);border-radius:999px;font-size:12px;font-weight:600;color:rgba(255,255,255,.78);max-width:100%}
+.hero-previous strong{font-size:13px}
+.hero-previous .income{color:#a9e5c6}
+.hero-previous .expense{color:#ffb8cc}

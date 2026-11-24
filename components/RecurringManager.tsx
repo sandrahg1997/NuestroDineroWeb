@@ -9,6 +9,8 @@ import { dateKey, monthlyEquivalent } from "@/lib/utils";
 import { daysUntil, dueLabel, frequencyLabel, isFinished, parseAmount, sortRecurring } from "@/lib/recurring";
 import { trapFocus, useToast } from "./Toast";
 import MoneyInput from "./MoneyInput";
+import ExportButton from "./ExportButton";
+import { recurringSheets } from "@/lib/export-sheets";
 
 type F = {
   id?: string;
@@ -219,8 +221,9 @@ export default function RecurringManager({
         </>
       )}
 
-      <div className="toolbar desktop-only" style={{ justifyContent: "flex-end", marginBottom: 14 }}>
-        <button type="button" className="btn btn-primary" onClick={() => setForm({ ...blank })}>
+      <div className="toolbar" style={{ justifyContent: "flex-end", marginBottom: 14 }}>
+        <ExportButton getSheets={() => recurringSheets(sorted)} fileName={`ourmoney-recurrentes-${dateKey()}.xlsx`} />
+        <button type="button" className="btn btn-primary desktop-only" onClick={() => setForm({ ...blank })}>
           <Plus size={16} />
           Nuevo recurrente
         </button>

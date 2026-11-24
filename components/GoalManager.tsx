@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, LoaderCircle, Minus, Pencil, Plus, Target, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import ExportButton from "./ExportButton";
+import { goalSheets } from "@/lib/export-sheets";
 import { daysLeftLabel, goalProgress, totalSaved, type Contribution, type Goal } from "@/lib/goals";
 import { dateKey } from "@/lib/utils";
 import Money from "./Money";
@@ -183,9 +185,22 @@ export default function GoalManager({
             <Money value={total} />
           </p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={newGoal}>
-          <Plus size={17} /> Nuevo objetivo
-        </button>
+        <div className="toolbar" style={{ gap: 8 }}>
+          {goals.length > 0 && (
+            <ExportButton
+              getSheets={() =>
+                goalSheets(
+                  goals.map((goal) => ({ goal, progress: goalProgress(goal, byGoal.get(goal.id) ?? [], today) })),
+                  contributions
+                )
+              }
+              fileName={`ourmoney-objetivos-${today}.xlsx`}
+            />
+          )}
+          <button type="button" className="btn btn-primary" onClick={newGoal}>
+            <Plus size={17} /> Nuevo objetivo
+          </button>
+        </div>
       </div>
 
       {!goals.length ? (

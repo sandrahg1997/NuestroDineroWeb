@@ -8,6 +8,14 @@ export type ChangelogEntry = {
 // `version` debe ser único y ordenable (usamos fecha YYYY-MM-DD); `date` es el texto que se muestra.
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2026-11-29",
+    date: "29 de noviembre de 2026",
+    items: [
+      "Nuevo: en Inicio, bajo el balance, ves cómo cerró el periodo anterior (ingresos menos gastos). Al pulsarlo se abre ese periodo.",
+      "Nuevo: exportar a Excel desde más sitios. El Informe del periodo (resumen, categorías, presupuestos, mayores gastos, comercios y todos los movimientos), Presupuestos, Recurrentes y Objetivos de ahorro (con el historial de aportaciones) tienen su botón «Exportar Excel».",
+    ],
+  },
+  {
     version: "2026-11-28",
     date: "28 de noviembre de 2026",
     items: [

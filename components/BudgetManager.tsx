@@ -6,6 +6,9 @@ import Money from "@/components/Money";
 import { LoaderCircle, PiggyBank, Trash2 } from "lucide-react";
 import { useToast } from "./Toast";
 import MoneyInput from "./MoneyInput";
+import ExportButton from "./ExportButton";
+import { budgetSheets } from "@/lib/export-sheets";
+import { dateKey } from "@/lib/utils";
 export default function BudgetManager({
   householdId,
   periodId,
@@ -69,84 +72,100 @@ export default function BudgetManager({
     else setRows((prev) => prev.filter((r) => r.id !== id));
     setDeletingId(null);
   }
+  // Lo que se ve ahora mismo: presupuesto, gastado y lo que queda de cada uno.
+  const exportSheets = () =>
+    budgetSheets(
+      periodLabel,
+      sorted.map((b) => ({
+        name: b.category?.name ?? "Presupuesto general",
+        amount: Number(b.amount),
+        spent: b.category_id ? (spending[b.category_id] ?? 0) : totalSpent,
+      }))
+    );
+
   return (
-    <div className="grid budgets-page-grid">
-      <form className="card" onSubmit={save}>
-        <h2>Definir presupuesto</h2>
-        <p className="subtitle">Periodo: {periodLabel}</p>
-        <div className="field" style={{ marginTop: 12 }}>
-          <label htmlFor="budgetmanager-categoria">Categoría</label>
-          <select
-            id="budgetmanager-categoria"
-            className="select"
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-          >
-            <option value="">Presupuesto general</option>
-            {categories
-              .filter((c) => c.type === "expense")
-              .map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.icon} {c.name}
-                </option>
-              ))}
-          </select>
-        </div>
-        <div className="field" style={{ marginTop: 12 }}>
-          <label htmlFor="budgetmanager-limite-del-periodo">Límite del periodo</label>
-          <MoneyInput id="budgetmanager-limite-del-periodo" value={amount} onChange={setAmount} required />
-        </div>
-        <button type="submit" className="btn btn-primary" style={{ marginTop: 16 }} disabled={saving}>
-          {saving ? "Guardando…" : "Guardar presupuesto"}
-        </button>
-      </form>
-      <div className="grid">
-        {sorted.map((b) => {
-          const spent = b.category_id ? (spending[b.category_id] ?? 0) : totalSpent;
-          const pct = Math.min(100, (spent / b.amount) * 100);
-          return (
-            <div className="card" key={b.id}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <div>
-                  <strong>
-                    {b.category?.icon} {b.category?.name ?? "Presupuesto general"}
-                  </strong>
-                  <div className="subtitle">
-                    <Money value={spent} /> de <Money value={b.amount} />
-                  </div>
-                </div>
-                <button
-                  aria-label={`Eliminar presupuesto ${b.category?.name ?? "general"}`}
-                  type="button"
-                  className="btn btn-ghost expense"
-                  onClick={() => remove(b.id)}
-                  disabled={deletingId === b.id}
-                >
-                  {deletingId === b.id ? <LoaderCircle size={16} className="spin" /> : <Trash2 size={16} />}
-                </button>
-              </div>
-              <div className="progress" style={{ marginTop: 13 }}>
-                <span style={{ width: `${pct}%` }} />
-              </div>
-              <div className="subtitle" style={{ marginTop: 7 }}>
-                {Math.round(pct)}% utilizado
-              </div>
-            </div>
-          );
-        })}
-        {!rows.length && (
-          <div className="card empty">
-            <span className="empty-icon">
-              <PiggyBank size={22} />
-            </span>
-            <strong>Sin presupuestos</strong>
-            <p>
-              Define un límite (general o por categoría) con el formulario de la izquierda y verás cuánto margen te
-              queda.
-            </p>
-          </div>
-        )}
+    <>
+      <div className="toolbar" style={{ marginBottom: 14 }}>
+        <ExportButton getSheets={exportSheets} fileName={`ourmoney-presupuestos-${dateKey()}.xlsx`} />
       </div>
-    </div>
+      <div className="grid budgets-page-grid">
+        <form className="card" onSubmit={save}>
+          <h2>Definir presupuesto</h2>
+          <p className="subtitle">Periodo: {periodLabel}</p>
+          <div className="field" style={{ marginTop: 12 }}>
+            <label htmlFor="budgetmanager-categoria">Categoría</label>
+            <select
+              id="budgetmanager-categoria"
+              className="select"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+            >
+              <option value="">Presupuesto general</option>
+              {categories
+                .filter((c) => c.type === "expense")
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.icon} {c.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="field" style={{ marginTop: 12 }}>
+            <label htmlFor="budgetmanager-limite-del-periodo">Límite del periodo</label>
+            <MoneyInput id="budgetmanager-limite-del-periodo" value={amount} onChange={setAmount} required />
+          </div>
+          <button type="submit" className="btn btn-primary" style={{ marginTop: 16 }} disabled={saving}>
+            {saving ? "Guardando…" : "Guardar presupuesto"}
+          </button>
+        </form>
+        <div className="grid">
+          {sorted.map((b) => {
+            const spent = b.category_id ? (spending[b.category_id] ?? 0) : totalSpent;
+            const pct = Math.min(100, (spent / b.amount) * 100);
+            return (
+              <div className="card" key={b.id}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div>
+                    <strong>
+                      {b.category?.icon} {b.category?.name ?? "Presupuesto general"}
+                    </strong>
+                    <div className="subtitle">
+                      <Money value={spent} /> de <Money value={b.amount} />
+                    </div>
+                  </div>
+                  <button
+                    aria-label={`Eliminar presupuesto ${b.category?.name ?? "general"}`}
+                    type="button"
+                    className="btn btn-ghost expense"
+                    onClick={() => remove(b.id)}
+                    disabled={deletingId === b.id}
+                  >
+                    {deletingId === b.id ? <LoaderCircle size={16} className="spin" /> : <Trash2 size={16} />}
+                  </button>
+                </div>
+                <div className="progress" style={{ marginTop: 13 }}>
+                  <span style={{ width: `${pct}%` }} />
+                </div>
+                <div className="subtitle" style={{ marginTop: 7 }}>
+                  {Math.round(pct)}% utilizado
+                </div>
+              </div>
+            );
+          })}
+          {!rows.length && (
+            <div className="card empty">
+              <span className="empty-icon">
+                <PiggyBank size={22} />
+              </span>
+              <strong>Sin presupuestos</strong>
+              <p>
+                Define un límite (general o por categoría) con el formulario de la izquierda y verás cuánto margen te
+                queda.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
